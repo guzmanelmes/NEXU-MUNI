@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Estilos Contraloría / SIGMA */
+    .table-contraloria thead th {
+        background-color: #212529;
+        color: white;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        vertical-align: middle;
+        padding: 10px;
+        border-color: #454d55;
+    }
+    .col-grado {
+        background-color: #e9ecef;
+        font-weight: 800;
+        text-align: center;
+        width: 60px;
+        vertical-align: middle;
+        font-size: 1.1rem;
+    }
+    
+    /* INPUTS MANUALES (Editables) */
+    .input-sueldo {
+        font-family: 'Consolas', monospace;
+        font-weight: 700;
+        color: #4a148c;
+        border: 1px solid transparent;
+        background: transparent;
+        text-align: right;
+        width: 100%;
+        font-size: 0.95rem;
+        padding: 6px;
+        transition: all 0.2s;
+    }
+    .input-sueldo:hover, .input-sueldo:focus {
+        background: white;
+        border: 1px solid #ced4da;
+        color: black;
+        box-shadow: none;
+        z-index: 2;
+        position: relative;
+    }
+
+    /* INPUTS AUTOMÁTICOS (Solo Lectura) */
+    .input-calculado {
+        font-family: 'Consolas', monospace;
+        font-weight: 600;
+        color: #1b5e20; /* Verde oscuro */
+        background-color: #e8f5e9; /* Verde muy suave */
+        border: 1px solid transparent;
+        text-align: right;
+        width: 100%;
+        font-size: 0.95rem;
+        padding: 6px;
+        cursor: not-allowed;
+    }
+
+    .td-monto { padding: 0 !important; vertical-align: middle; position: relative; }
+    .table-striped tbody tr:nth-of-type(odd) { background-color: rgba(0,0,0,0.02); }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-0 fw-bold" style="color: #6610f2;">
+            <i class="bi bi-table"></i> Tabla Maestra (Vista Contraloría)
+        </h3>
+        <p class="text-muted mb-0">
+            Vigencia: <span class="badge bg-dark fs-6">{{ fecha_vigencia }}</span>
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('remuneraciones_bp.index') }}" class="btn btn-secondary">Volver</a>
+        
+        <button type="button" class="btn btn-warning fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#modalReajuste">
+            <i class="bi bi-magic"></i> Reajuste Diferenciado
+        </button>
+
+        <button type="submit" form="formMatriz" class="btn btn-primary fw-bold px-4 shadow-sm" style="background-color: #6610f2; border:none;">
+            <i class="bi bi-save"></i> ACTUALIZAR & RECALCULAR
+        </button>
+    </div>
+</div>
+
+<form id="formMatriz" method="POST" action="{{ url_for('remuneraciones_bp.ver_matriz', fecha_vigencia=fecha_vigencia) }}">
+    <div class="card shadow border rounded-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover mb-0 table-contraloria">
+                    <thead>
+                        <tr>
+                            <th class="text-center bg-dark text-white">GRADO</th>
+                            <th class="text-center bg-secondary text-white" style="min-width: 120px;">
+                                SUELDO BASE<br>
+                                <span class="badge bg-light text-dark text-uppercase" style="font-size: 0.6em;">MANUAL</span>
+                            </th>
+                            
+                            {% for h in haberes_cols %}
+                            <th class="text-center" style="min-width: 120px;">
+                                <div class="d-flex flex-column align-items-center">
+                                    <span class="fw-bold">{{ h.codigo }}</span>
+                                    <small style="font-size: 0.65rem; color: #adb5bd; font-weight: normal; margin-bottom: 2px;">
+                                        {{ h.nombre[:15] }}...
+                                    </small>
+                                    
+                                    {% if h.es_manual %}
+                                        <span class="badge bg-primary text-uppercase" style="font-size: 0.5em; opacity: 0.8;">MANUAL</span>
+                                    {% else %}
+                                        <span class="badge bg-success text-uppercase" style="font-size: 0.5em; opacity: 0.8;">AUTO (FORMULA)</span>
+                                    {% endif %}
+                                </div>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in filas %}
+                        <tr>
+                            <td class="col-grado">{{ fila.grado }}</td>
+                            
+                            <td class="td-monto border-end" style="background-color: #f8f9fa;">
+                                <input type="number" 
+                                       name="sueldo_base_grado_{{ fila.grado }}"
+                                       value="{{ fila.sueldo_base }}" 
+                                       class="form-control input-sueldo fw-bold text-primary">
+                            </td>
+
+                            {% for h in haberes_cols %}
+                            <td class="td-monto">
+                                {% if h.es_manual %}
+                                    <input type="number" 
+                                           name="haber_grado_{{ fila.grado }}_id_{{ h.id }}"
+                                           value="{{ fila.haberes.get(h.id, 0) }}" 
+                                           class="form-control input-sueldo">
+                                {% else %}
+                                    <input type="number" 
+                                           value="{{ fila.haberes.get(h.id, 0) }}" 
+                                           class="form-control input-calculado"
+                                           readonly
+                                           tabindex="-1" 
+                                           title="Valor calculado automáticamente por fórmula">
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="{{ haberes_cols|length + 2 }}" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No hay datos generados para esta vigencia.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="modal fade" id="modalReajuste" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-calculator"></i> Reajuste Diferenciado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('remuneraciones_bp.reajuste_diferenciado') }}" method="POST">
+                <div class="modal-body">
+                    <p class="small text-muted">
+                        Esta herramienta aplicará un porcentaje de aumento a todos los montos (Sueldo Base y Haberes Manuales) 
+                        para el rango de grados seleccionado. Los haberes automáticos se recalcularán solos.
+                    </p>
+                    
+                    <input type="hidden" name="fecha_vigencia" value="{{ fecha_vigencia }}">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">1. Porcentaje de Aumento (%)</label>
+                        <input type="number" step="0.01" name="porcentaje" class="form-control form-control-lg" placeholder="Ej: 3.5" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">2. Grado Inicial</label>
+                            <input type="number" name="grado_min" class="form-control" value="1" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">3. Grado Final</label>
+                            <input type="number" name="grado_max" class="form-control" value="20" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-dark fw-bold">
+                        <i class="bi bi-check-lg"></i> Aplicar Reajuste
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

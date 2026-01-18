@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-dark text-white text-center py-4">
+                <div class="display-1"><i class="bi bi-person-circle"></i></div>
+                <h4 class="mt-2">{{ persona.nombres }}</h4>
+                <p class="mb-0">{{ persona.apellido_paterno }} {{ persona.apellido_materno }}</p>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <strong>RUT:</strong> <br> {{ persona.rut }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Email:</strong> <br> {{ persona.email }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Teléfono:</strong> <br> {{ persona.telefono or 'No registrado' }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Dirección:</strong> <br> {{ persona.direccion or 'No registrada' }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Estado Civil / Sexo:</strong> <br> {{ persona.sexo.descripcion }}
+                    </li>
+                </ul>
+                <div class="d-grid gap-2 mt-3">
+                    <a href="{{ url_for('web_bp.editar_persona', rut=persona.rut) }}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Editar Datos Personales
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        
+        <div class="card shadow mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-primary"><i class="bi bi-mortarboard-fill"></i> Historial Académico</h5>
+                <span class="badge bg-secondary">{{ persona.historial_academico|length }} Títulos</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nivel</th>
+                                <th>Título / Institución</th>
+                                <th>Fecha</th>
+                                <th class="text-center">Principal</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h in persona.historial_academico %}
+                            <tr class="{% if h.es_principal %}table-success{% endif %}">
+                                <td><span class="badge bg-light text-dark border">{{ h.nivel_detalle.descripcion }}</span></td>
+                                <td>
+                                    <strong>{{ h.nombre_titulo }}</strong><br>
+                                    <small class="text-muted">{{ h.institucion }}</small>
+                                </td>
+                                <td>{{ h.fecha_titulacion }}</td>
+                                <td class="text-center">
+                                    {% if h.es_principal %}
+                                        <i class="bi bi-star-fill text-warning fs-5" title="Título Principal"></i>
+                                    {% else %}
+                                        <i class="bi bi-star text-muted" title="Secundario"></i>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <form action="{{ url_for('web_bp.eliminar_titulo', id_historial=h.id) }}" method="POST" onsubmit="return confirm('¿Borrar título?');">
+                                        <input type="hidden" name="rut_retorno" value="{{ persona.rut }}">
+                                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    Sin antecedentes académicos registrados.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow border-light">
+            <div class="card-header bg-light">
+                <strong><i class="bi bi-plus-circle"></i> Agregar Nuevo Título</strong>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('web_bp.agregar_titulo') }}" method="POST">
+                    <input type="hidden" name="rut_persona" value="{{ persona.rut }}">
+
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="small text-muted">Nivel</label>
+                            <select name="nivel_estudios_id" class="form-select form-select-sm" required>
+                                {% for n in niveles %}
+                                    <option value="{{ n.id }}">{{ n.descripcion }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="small text-muted">Nombre del Título</label>
+                            <input type="text" name="nombre_titulo" class="form-control form-control-sm" required placeholder="Ej: Ingeniero en Informática">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small text-muted">Institución</label>
+                            <input type="text" name="institucion" class="form-control form-control-sm" required placeholder="Universidad...">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small text-muted">Fecha Titulación</label>
+                            <input type="date" name="fecha_titulacion" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <div class="form-check mb-1">
+                                <input class="form-check-input" type="checkbox" name="es_principal" id="checkPrincipal">
+                                <label class="form-check-label small" for="checkPrincipal">
+                                    Es Principal
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-end">
+                        <button type="submit" class="btn btn-success btn-sm">
+                            <i class="bi bi-save"></i> Registrar Título
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-11">
+        
+        <div class="card shadow border-0">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-pencil-square"></i> Editar Funcionario</h4>
+                <div class="text-end">
+                    <span class="badge bg-dark">RUT: {{ persona.rut }}</span>
+                </div>
+            </div>
+            <div class="card-body bg-light">
+                
+                <form action="{{ url_for('web_bp.editar_persona', rut=persona.rut) }}" method="POST">
+                    
+                    <div class="card mb-3 shadow-sm border-start border-warning border-4">
+                        <div class="card-header bg-white fw-bold text-dark">1. Identificación Personal</div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small">RUT (No editable)</label>
+                                    <input type="text" class="form-control bg-light fw-bold" value="{{ persona.rut }}" readonly>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small">Fecha Nacimiento</label>
+                                    <input type="date" name="fecha_nacimiento" class="form-control" 
+                                           value="{{ persona.fecha_nacimiento }}" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small">Nacionalidad</label>
+                                    <input type="text" name="nacionalidad" class="form-control" 
+                                           value="{{ persona.nacionalidad or 'Chilena' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small">Sexo</label>
+                                    <select name="sexo_id" class="form-select" required>
+                                        <option value="">Seleccione...</option>
+                                        {% for s in sexos %}
+                                            <option value="{{ s.id }}" {% if s.id == persona.sexo_id %}selected{% endif %}>
+                                                {{ s.descripcion }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small">Nombres</label>
+                                    <input type="text" name="nombres" class="form-control" value="{{ persona.nombres }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small">Apellido Paterno</label>
+                                    <input type="text" name="apellido_paterno" class="form-control" value="{{ persona.apellido_paterno }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small">Apellido Materno</label>
+                                    <input type="text" name="apellido_materno" class="form-control" value="{{ persona.apellido_materno }}" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3 shadow-sm border-start border-warning border-4">
+                        <div class="card-header bg-white fw-bold text-dark">2. Contacto y Residencia</div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small">Dirección Particular</label>
+                                    <input type="text" name="direccion" class="form-control" value="{{ persona.direccion or '' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small">Comuna</label>
+                                    <input type="text" name="comuna_residencia" class="form-control" value="{{ persona.comuna_residencia or 'Santa Juana' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small">Teléfono</label>
+                                    <input type="text" name="telefono" class="form-control" value="{{ persona.telefono or '' }}">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold small">Email Institucional</label>
+                                    <input type="email" name="email" class="form-control" value="{{ persona.email }}" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3 shadow-sm h-100 border-start border-success border-4">
+                                <div class="card-header bg-white fw-bold text-success">3. Perfil Académico</div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">Nivel de Estudios</label>
+                                        <select name="nivel_estudios_id" class="form-select">
+                                            <option value="">Seleccione...</option>
+                                            {% for n in niveles_estudios %}
+                                                <option value="{{ n.id }}" {% if n.id == persona.nivel_estudios_id %}selected{% endif %}>
+                                                    {{ n.descripcion }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">Título Profesional / Oficio</label>
+                                        <input type="text" name="titulo_profesional" class="form-control" 
+                                               value="{{ persona.titulo_profesional or '' }}" maxlength="100">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card mb-3 shadow-sm h-100 border-start border-info border-4">
+                                <div class="card-header bg-white fw-bold text-info">4. Datos Bancarios</div>
+                                <div class="card-body">
+                                    <div class="row g-2">
+                                        <div class="col-md-12">
+                                            <label class="form-label fw-bold small">Banco</label>
+                                            <select name="banco_nombre" class="form-select">
+                                                <option value="">Seleccione...</option>
+                                                {% set lista_bancos = ['Banco Estado', 'Banco de Chile', 'BCI', 'Santander', 'Scotiabank', 'Itaú'] %}
+                                                {% for b in lista_bancos %}
+                                                    <option value="{{ b }}" {% if persona.banco_nombre == b %}selected{% endif %}>{{ b }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold small">Tipo Cuenta</label>
+                                            <select name="tipo_cuenta" class="form-select">
+                                                <option value="">Seleccione...</option>
+                                                {% set lista_tipos = ['Cuenta Rut', 'Cuenta Vista', 'Cuenta Corriente', 'Ahorro'] %}
+                                                {% for t in lista_tipos %}
+                                                    <option value="{{ t }}" {% if persona.tipo_cuenta == t %}selected{% endif %}>{{ t }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold small">N° Cuenta</label>
+                                            <input type="text" name="numero_cuenta" class="form-control" value="{{ persona.numero_cuenta or '' }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4 shadow-sm border-start border-secondary border-4">
+                        <div class="card-header bg-white fw-bold text-secondary">5. Datos Administrativos e Inclusión</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 border-end">
+                                    <label class="form-label fw-bold small text-muted mb-3">Situación de Discapacidad</label>
+                                    
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" name="es_discapacitado" id="checkDiscapacidad" value="1"
+                                               {% if persona.es_discapacitado %}checked{% endif %}>
+                                        <label class="form-check-label" for="checkDiscapacidad">Presenta Discapacidad</label>
+                                    </div>
+                                    
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="tiene_credencial_compin" id="checkCredencial" value="1"
+                                               {% if persona.tiene_credencial_compin %}checked{% endif %}>
+                                        <label class="form-check-label" for="checkCredencial">Tiene Credencial COMPIN</label>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold">Tipo de Discapacidad</label>
+                                        <input type="text" name="tipo_discapacidad" class="form-control form-control-sm" 
+                                               value="{{ persona.tipo_discapacidad or '' }}">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold">% Discapacidad</label>
+                                        <input type="number" name="porcentaje_discapacidad" class="form-control form-control-sm" 
+                                               min="0" max="100" value="{{ persona.porcentaje_discapacidad or '0' }}">
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="row">
+                                        <div class="col-12 mb-3">
+                                            <label class="form-label fw-bold small text-primary">Fecha Ingreso Municipio</label>
+                                            <input type="date" name="fecha_ingreso_municipio" class="form-control" 
+                                                   value="{{ persona.fecha_ingreso_municipio }}">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label fw-bold small text-success">Fecha Ingreso Sector Público</label>
+                                            <input type="date" name="fecha_ingreso_sector_publico" class="form-control" 
+                                                   value="{{ persona.fecha_ingreso_sector_publico }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pb-4">
+                        <a href="{{ url_for('web_bp.listar_personas') }}" class="btn btn-outline-secondary px-4 fw-bold">Cancelar</a>
+                        <button type="submit" class="btn btn-warning px-5 fw-bold shadow">
+                            <i class="bi bi-pencil-fill"></i> Actualizar Funcionario
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

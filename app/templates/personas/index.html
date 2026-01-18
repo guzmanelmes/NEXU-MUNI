@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-7">
+        <h2 class="mb-0 fw-bold text-dark">Gestión de Personas</h2>
+        <p class="text-muted">Listado oficial de funcionarios municipales</p>
+    </div>
+    <div class="col-md-5 text-end">
+        <a href="{{ url_for('personas_bp.carga_masiva') }}" class="btn btn-success text-white fw-bold me-2 shadow-sm">
+            <i class="bi bi-file-earmark-excel-fill"></i> Carga Masiva
+        </a>
+        
+        <a href="{{ url_for('web_bp.crear_persona') }}" class="btn btn-primary fw-bold shadow-sm">
+            <i class="bi bi-person-plus-fill"></i> Nueva Persona
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">RUT</th>
+                        <th>Nombre Completo</th>
+                        <th>Cargo / Título</th>
+                        <th>Email</th>
+                        <th>Estado</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in personas %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-primary" style="font-family: monospace; font-size: 1.1em;">
+                            {{ p.rut }}
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark">{{ p.nombres }} {{ p.apellido_paterno }}</div>
+                            {% if p.sexo %}
+                                <small class="text-muted"><i class="bi bi-gender-ambiguous"></i> {{ p.sexo.descripcion }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if p.titulo_profesional %}
+                                <span class="badge bg-info text-dark border border-info bg-opacity-25">
+                                    {{ p.titulo_profesional[:30] }}{{ '...' if p.titulo_profesional|length > 30 }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-light text-muted border">Sin Título</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if p.email %}
+                                <a href="mailto:{{ p.email }}" class="text-decoration-none text-secondary">
+                                    <i class="bi bi-envelope"></i> {{ p.email }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-success">Activo</span>
+                        </td>
+                        
+                        <td class="text-end pe-4">
+                            <div class="d-flex justify-content-end gap-2">
+                                
+                                <a href="{{ url_for('web_bp.ver_perfil', rut=p.rut) }}" class="btn btn-sm btn-info text-white" title="Ver Ficha Completa">
+                                    <i class="bi bi-eye-fill"></i>
+                                </a>
+
+                                <a href="{{ url_for('web_bp.editar_persona', rut=p.rut) }}" class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+
+                                <form action="{{ url_for('web_bp.eliminar_persona', rut=p.rut) }}" method="POST" 
+                                      onsubmit="return confirm('¿Estás seguro de eliminar a {{ p.nombres }}? Esta acción no se puede deshacer.');">
+                                    
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <div class="text-muted opacity-50 mb-3">
+                                <i class="bi bi-people fs-1"></i>
+                            </div>
+                            <h4 class="text-muted">No hay personas registradas</h4>
+                            <p class="small text-muted">Haz clic en "Nueva Persona" o usa la "Carga Masiva" para comenzar.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

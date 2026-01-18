@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="bi bi-cash-coin text-warning"></i> Configuración Escala de Viáticos
+        </h1>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card shadow mb-4 border-start border-primary border-4">
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 fw-bold text-primary">Nuevo Tramo (Grados)</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('viaticos_bp.configurar_escala') }}">
+                        
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="small fw-bold">Grado Desde</label>
+                                <input type="number" name="grado_min" class="form-control" placeholder="Ej: 1" required min="1" max="30">
+                            </div>
+                            <div class="col-6">
+                                <label class="small fw-bold">Grado Hasta</label>
+                                <input type="number" name="grado_max" class="form-control" placeholder="Ej: 5" required min="1" max="30">
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h6 class="small text-muted fw-bold">Valores Monetarios ($)</h6>
+
+                        <div class="mb-2">
+                            <label class="small fw-bold text-success">100% (Completo)</label>
+                            <input type="number" name="monto_100" class="form-control" placeholder="Ej: 85000" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="small fw-bold text-info">40% (Sin Pernoctar)</label>
+                            <input type="number" name="monto_40" class="form-control" placeholder="Ej: 34000" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="small fw-bold text-warning">20% (Faena)</label>
+                            <input type="number" name="monto_20" class="form-control" placeholder="Ej: 17000" required>
+                        </div>
+
+                        <hr>
+                        <h6 class="small text-muted fw-bold">Vigencia</h6>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="small">Inicio</label>
+                                <input type="date" name="fecha_inicio" class="form-control form-control-sm" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="small">Término (Opcional)</label>
+                                <input type="date" name="fecha_fin" class="form-control form-control-sm">
+                                <small class="text-muted" style="font-size: 0.7rem;">Dejar vacío si sigue vigente indefinidamente</small>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">
+                            <i class="bi bi-save"></i> Guardar Tramo
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 fw-bold text-dark">Escalas Registradas</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+                            <thead class="table-dark text-center">
+                                <tr>
+                                    <th>Rango Grados</th>
+                                    <th>100%</th>
+                                    <th>40%</th>
+                                    <th>20%</th>
+                                    <th>Vigencia</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for esc in escalas %}
+                                <tr>
+                                    <td class="text-center fw-bold align-middle">
+                                        <span class="badge bg-secondary fs-6">{{ esc.grado_min }} al {{ esc.grado_max }}</span>
+                                    </td>
+                                    <td class="text-end text-success fw-bold align-middle">
+                                        ${{ "{:,.0f}".format(esc.monto_100).replace(',', '.') }}
+                                    </td>
+                                    <td class="text-end text-info align-middle">
+                                        ${{ "{:,.0f}".format(esc.monto_40).replace(',', '.') }}
+                                    </td>
+                                    <td class="text-end text-warning align-middle">
+                                        ${{ "{:,.0f}".format(esc.monto_20).replace(',', '.') }}
+                                    </td>
+                                    <td class="small align-middle text-center">
+                                        {{ esc.fecha_inicio.strftime('%d/%m/%Y') }} <br> 
+                                        al <br>
+                                        {% if esc.fecha_fin %}
+                                            {{ esc.fecha_fin.strftime('%d/%m/%Y') }}
+                                        {% else %}
+                                            <span class="badge bg-success">VIGENTE</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <form action="{{ url_for('viaticos_bp.eliminar_escala', id=esc.id) }}" method="POST" onsubmit="return confirm('¿Seguro de eliminar este tramo?');">
+                                            <button type="submit" class="btn btn-danger btn-sm rounded-circle">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        No hay escalas configuradas. Comience agregando una.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

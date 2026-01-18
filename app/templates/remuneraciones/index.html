@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="mb-0"><i class="bi bi-cash-coin"></i> Escalas de Remuneraciones</h2>
+        <p class="text-muted">Definición de sueldos por Estamento y Grado</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('remuneraciones_bp.crear_escala') }}" class="btn btn-success">
+            <i class="bi bi-plus-lg"></i> Nueva Escala
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Fecha Vigencia</th>
+                        <th>Estamento</th>
+                        <th>Grado</th>
+                        <th>Sueldo Base</th>
+                        <th>Total Haberes</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in escalas %}
+                    <tr>
+                        <td>
+                            <i class="bi bi-calendar-event"></i> {{ e.fecha_vigencia.strftime('%d-%m-%Y') }}
+                        </td>
+                        <td class="fw-bold text-primary">{{ e.estamento.estamento }}</td>
+                        <td><span class="badge bg-secondary fs-6">Grado {{ e.grado }}</span></td>
+                        <td>${{ "{:,.0f}".format(e.sueldo_base).replace(',', '.') }}</td>
+                        <td>
+                            {% set total = namespace(value=0) %}
+                            {% for d in e.detalles %}
+                                {% set total.value = total.value + d.monto %}
+                            {% endfor %}
+                            <strong>${{ "{:,.0f}".format(total.value).replace(',', '.') }}</strong>
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-info" title="Ver Detalle"><i class="bi bi-eye"></i></button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            No hay escalas registradas. Comienza creando una nueva.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

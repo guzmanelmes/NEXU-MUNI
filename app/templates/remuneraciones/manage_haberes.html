@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow border-0 sticky-top" style="top: 20px; z-index: 1;">
+            <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-gear-fill"></i> Configurar Haber</span>
+                <button type="button" class="btn btn-sm btn-light text-primary fw-bold" onclick="limpiarFormulario()">
+                    <i class="bi bi-plus-lg"></i> Nuevo
+                </button>
+            </div>
+            <div class="card-body bg-light">
+                <form action="{{ url_for('remuneraciones_bp.gestionar_haberes') }}" method="POST" id="formHaber">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">1. Datos Básicos</label>
+                        <input type="text" name="codigo" id="inputCodigo" class="form-control text-uppercase mb-2 fw-bold" placeholder="Código (Ej: ADP)" required>
+                        <input type="text" name="nombre" id="inputNombre" class="form-control" placeholder="Nombre (Ej: Alta Dirección)" required>
+                        <div class="form-text small" id="msgModo">Modo: Creación</div>
+                    </div>
+
+                    <label class="form-label fw-bold">2. Configuración</label>
+                    
+                    <div class="mb-2 form-check form-switch bg-white p-2 border rounded">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" name="es_permanente" id="checkPermanente" checked>
+                        <label class="form-check-label fw-bold text-primary" for="checkPermanente">Es Haber Permanente</label>
+                        <div class="small text-muted ps-2" style="font-size: 0.75rem;">
+                            Marcado: Se paga mes a mes (Ej: Zona).<br>
+                            Desmarcado: Es ocasional (Ej: Bono Navidad).
+                        </div>
+                    </div>
+
+                    <div class="mb-2 form-check form-switch bg-white p-2 border rounded">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" name="es_visible_matriz" id="checkVisible" checked>
+                        <label class="form-check-label fw-bold text-dark" for="checkVisible">
+                            <i class="bi bi-table"></i> Visible en Matriz
+                        </label>
+                        <div class="small text-muted ps-2" style="font-size: 0.75rem;">
+                            Si se desmarca, este haber NO aparecerá en la tabla general de sueldos (útil para valores fijos de ley).
+                        </div>
+                    </div>
+
+                    <div class="mb-3 form-check form-switch bg-white p-2 border rounded">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" name="es_manual" id="checkManual" checked onchange="toggleFormula()">
+                        <label class="form-check-label fw-bold" for="checkManual">Es Monto Manual (Input)</label>
+                    </div>
+
+                    <div class="mb-3" id="divFormula" style="display:none;">
+                        <label class="form-label fw-bold text-success">3. Fórmula de Cálculo</label>
+                        <textarea name="formula" id="inputFormula" class="form-control font-monospace" rows="3" placeholder="Ej: (SUELDO_BASE * 0.1)"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-primary border-bottom w-100">
+                            4. Aplica a los Estamentos:
+                        </label>
+                        <div class="bg-white border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                            {% for est in estamentos %}
+                            <div class="form-check">
+                                <input class="form-check-input check-estamento" type="checkbox" name="estamentos_seleccionados" value="{{ est.id }}" id="est_{{ est.id }}">
+                                <label class="form-check-label small" for="est_{{ est.id }}">
+                                    {{ est.estamento }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                            <div class="mt-2 pt-2 border-top text-center">
+                                <button type="button" class="btn btn-xs btn-link p-0 text-decoration-none" onclick="marcarTodos(true)">Todos</button> | 
+                                <button type="button" class="btn btn-xs btn-link p-0 text-decoration-none" onclick="marcarTodos(false)">Ninguno</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 fw-bold" id="btnGuardar">
+                        <i class="bi bi-save"></i> Guardar Haber
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-bold">Catálogo de Haberes</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Código / Nombre</th>
+                                <th>Clasificación</th>
+                                <th>Cálculo</th>
+                                <th>Estamentos</th>
+                                <th class="text-end">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h in haberes %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ h.codigo }}</div>
+                                    <div class="small text-muted">{{ h.nombre }}</div>
+                                    {% if not h.es_visible_matriz %}
+                                        <div class="badge bg-secondary text-white mt-1" style="font-size:0.6em">
+                                            <i class="bi bi-eye-slash"></i> Oculto en Matriz
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if h.es_permanente %}
+                                        <span class="badge rounded-pill bg-info text-dark">Permanente</span>
+                                    {% else %}
+                                        <span class="badge rounded-pill bg-warning text-dark">Ocasional</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if h.es_manual %}
+                                        <span class="badge bg-secondary">Manual</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Automático</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if h.estamentos_habilitados|length == estamentos|length %}
+                                        <span class="badge bg-dark">Todos</span>
+                                    {% else %}
+                                        {% for est in h.estamentos_habilitados %}
+                                            <span class="badge bg-light text-dark border me-1">{{ est.estamento[:3] }}</span>
+                                        {% endfor %}
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary"
+                                            onclick="cargarEdicion(this)"
+                                            data-codigo="{{ h.codigo }}"
+                                            data-nombre="{{ h.nombre }}"
+                                            data-manual="{{ 'true' if h.es_manual else 'false' }}"
+                                            data-permanente="{{ 'true' if h.es_permanente else 'false' }}" 
+                                            data-visible="{{ 'true' if h.es_visible_matriz else 'false' }}" 
+                                            data-formula="{{ h.formula or '' }}"
+                                            data-estamentos='[{% for e in h.estamentos_habilitados %}{{ e.id }}{% if not loop.last %}, {% endif %}{% endfor %}]'>
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleFormula() {
+        var isManual = document.getElementById('checkManual').checked;
+        var divFormula = document.getElementById('divFormula');
+        divFormula.style.display = isManual ? 'none' : 'block';
+    }
+
+    function marcarTodos(estado) {
+        document.querySelectorAll('.check-estamento').forEach(chk => chk.checked = estado);
+    }
+
+    function cargarEdicion(btn) {
+        const codigo = btn.getAttribute('data-codigo');
+        const nombre = btn.getAttribute('data-nombre');
+        const esManual = btn.getAttribute('data-manual') === 'true';
+        const esPermanente = btn.getAttribute('data-permanente') === 'true';
+        const esVisible = btn.getAttribute('data-visible') === 'true'; // <--- LEER
+        const formula = btn.getAttribute('data-formula');
+        const idsEstamentos = JSON.parse(btn.getAttribute('data-estamentos'));
+
+        document.getElementById('inputCodigo').value = codigo;
+        document.getElementById('inputNombre').value = nombre;
+        document.getElementById('checkManual').checked = esManual;
+        document.getElementById('checkPermanente').checked = esPermanente;
+        document.getElementById('checkVisible').checked = esVisible; // <--- SETEAR
+        document.getElementById('inputFormula').value = formula;
+
+        marcarTodos(false);
+        idsEstamentos.forEach(id => {
+            const chk = document.getElementById('est_' + id);
+            if (chk) chk.checked = true;
+        });
+
+        toggleFormula();
+        document.getElementById('msgModo').innerHTML = '<span class="text-warning fw-bold"><i class="bi bi-pencil"></i> Modo: Edición</span>';
+        document.getElementById('btnGuardar').innerText = 'Actualizar Haber';
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function limpiarFormulario() {
+        document.getElementById('formHaber').reset();
+        document.getElementById('msgModo').innerText = 'Modo: Creación';
+        document.getElementById('btnGuardar').innerHTML = '<i class="bi bi-save"></i> Guardar Haber';
+        
+        // Valores por defecto
+        document.getElementById('checkManual').checked = true;
+        document.getElementById('checkPermanente').checked = true;
+        document.getElementById('checkVisible').checked = true; // Por defecto visible
+        
+        toggleFormula();
+        marcarTodos(true);
+    }
+
+    toggleFormula();
+</script>
+{% endblock %}

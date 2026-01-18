@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold"><i class="bi bi-calculator"></i> Simulador de Sueldos</h2>
+    <span class="badge bg-secondary fs-6">Modo: Proyección de Gastos</span>
+</div>
+
+<div class="card shadow-sm border-0 mb-4 bg-light">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-bold small">1. Escala / Vigencia</label>
+                <select id="selectFecha" class="form-select" onchange="cargarDatos()">
+                    {% for item in fechas %}
+                        <option value="{{ item[0] }}">{{ item[0].strftime('%d-%m-%Y') }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold small">2. Estamento</label>
+                <select id="selectEstamento" class="form-select" onchange="cargarDatos()">
+                    {% for est in estamentos %}
+                        <option value="{{ est.id }}">{{ est.estamento }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold small">3. Grado</label>
+                <input type="number" id="inputGrado" class="form-control fw-bold text-center" value="6" min="1" onchange="cargarDatos()">
+            </div>
+            
+            <div class="col-md-2">
+                <div class="bg-white border rounded p-2 d-flex flex-column gap-1">
+                    <div class="form-check form-switch mb-1">
+                        <input class="form-check-input" type="checkbox" id="checkTitulo" checked onchange="recalcularVisual()">
+                        <label class="form-check-label small fw-bold text-success" for="checkTitulo">Con Título</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="checkReciente" onchange="recalcularVisual()">
+                        <label class="form-check-label small text-muted" for="checkReciente">Ingreso Reciente</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-2 text-end">
+                <button id="btnCalcular" class="btn btn-primary fw-bold w-100" onclick="cargarDatos()">
+                    <i class="bi bi-arrow-clockwise"></i> Calcular
+                </button>
+            </div>
+        </div>
+        
+        <div id="errorMsg" class="alert alert-danger mt-3 mb-0 py-2 small" style="display:none;"></div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow border-0 h-100">
+            <div class="card-header bg-dark text-white fw-bold">
+                <i class="bi bi-file-earmark-person"></i> Haberes Contractuales
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-striped mb-0 small">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Concepto</th>
+                            <th class="text-end">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaFijos">
+                        <tr><td colspan="2" class="text-center text-muted py-3">Cargando...</td></tr>
+                    </tbody>
+                    <tfoot class="table-group-divider">
+                        <tr class="fw-bold" style="background-color: #e9ecef;">
+                            <td>SUBTOTAL FIJO</td>
+                            <td class="text-end" id="subtotalFijo">$0</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow border-0 h-100">
+            <div class="card-header bg-primary text-white fw-bold">
+                <i class="bi bi-clock-history"></i> Horas Extras
+            </div>
+            <div class="card-body bg-light">
+                <div id="panelHorasExtras" style="display:none;">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold d-flex justify-content-between">
+                            <span>Diurnas (25%)</span>
+                            <span class="badge bg-info text-dark" id="lblValor25">$0 /hr</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" id="inputCant25" class="form-control" placeholder="0" min="0" oninput="calcularTotal()">
+                            <span class="input-group-text small">hrs</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold d-flex justify-content-between">
+                            <span>Nocturnas (50%)</span>
+                            <span class="badge bg-info text-dark" id="lblValor50">$0 /hr</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" id="inputCant50" class="form-control" placeholder="0" min="0" oninput="calcularTotal()">
+                            <span class="input-group-text small">hrs</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="msgNoExtras" class="alert alert-warning small text-center" style="display:none;">
+                    <i class="bi bi-info-circle"></i> Este estamento no tiene permiso para realizar Horas Extras.
+                </div>
+            </div>
+            <div class="card-footer bg-white text-end fw-bold text-primary">
+                Total Extras: <span id="totalExtras">$0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow border-0 mb-3 border-warning">
+            <div class="card-header bg-warning text-dark fw-bold">
+                <i class="bi bi-gift"></i> Adicionales / Bonos
+            </div>
+            <div class="card-body p-2">
+                <div class="input-group mb-2">
+                    <select id="selectAdicional" class="form-select form-select-sm">
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
+                <div class="input-group mb-2">
+                    <span class="input-group-text">$</span>
+                    <input type="number" id="montoAdicional" class="form-control form-select-sm" placeholder="Monto">
+                    <button class="btn btn-dark btn-sm" onclick="agregarAdicional()">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+                <ul class="list-group list-group-flush small" id="listaAdicionales" style="max-height: 150px; overflow-y: auto;"></ul>
+            </div>
+        </div>
+        <div class="card shadow border-0 bg-dark text-white text-center">
+            <div class="card-body py-4">
+                <h6 class="text-uppercase text-muted ls-1">Total Haberes (Bruto)</h6>
+                <div class="display-4 fw-bold text-success" id="totalFinal">$0</div>
+                <small class="text-muted">Simulación estimada</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- CÓDIGOS DE SISTEMA ---
+    const COD_HE_25     = 'HE_25';
+    const COD_HE_50     = 'HE_50';
+    const COD_ASIG_PROF = 'ASIG_PROF';      
+    const COD_ASIG_JEF  = 'ASIG_DIRJEF'; 
+
+    let datosSimulacion = {
+        base: 0,
+        fijos_raw: [],
+        adicionales_seleccionados: [],
+        valor_hora_25: 0,
+        valor_hora_50: 0
+    };
+
+    document.addEventListener('DOMContentLoaded', () => cargarDatos());
+
+    function cargarDatos() {
+        const fecha = document.getElementById('selectFecha').value;
+        const estamento = document.getElementById('selectEstamento').value;
+        const grado = document.getElementById('inputGrado').value;
+        const errorDiv = document.getElementById('errorMsg');
+        const btn = document.getElementById('btnCalcular');
+
+        errorDiv.style.display = 'none';
+        document.getElementById('inputCant25').value = '';
+        document.getElementById('inputCant50').value = '';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> ...';
+        btn.disabled = true;
+
+        datosSimulacion.adicionales_seleccionados = [];
+        renderAdicionales();
+
+        fetch("{{ url_for('remuneraciones_bp.api_valores_grado') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fecha, grado, estamento_id: estamento })
+        })
+        .then(res => res.json().then(data => ({status: res.status, body: data})))
+        .then(response => {
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Calcular';
+            btn.disabled = false;
+            if (response.status !== 200) {
+                errorDiv.innerText = response.body.error || 'Error desconocido';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            procesarDatos(response.body);
+        })
+        .catch(err => {
+            console.error(err);
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Calcular';
+            btn.disabled = false;
+        });
+    }
+
+    function procesarDatos(data) {
+        datosSimulacion.base = data.valores.SUELDO_BASE || 0;
+        datosSimulacion.valor_hora_25 = data.valores[COD_HE_25] || 0;
+        datosSimulacion.valor_hora_50 = data.valores[COD_HE_50] || 0;
+
+        const panelHE = document.getElementById('panelHorasExtras');
+        const msgNoHE = document.getElementById('msgNoExtras');
+
+        if (data.permite_horas_extras) {
+            panelHE.style.display = 'block';
+            msgNoHE.style.display = 'none';
+            document.getElementById('lblValor25').innerText = '$' + datosSimulacion.valor_hora_25.toLocaleString();
+            document.getElementById('lblValor50').innerText = '$' + datosSimulacion.valor_hora_50.toLocaleString();
+        } else {
+            panelHE.style.display = 'none';
+            msgNoHE.style.display = 'block';
+            datosSimulacion.valor_hora_25 = 0;
+            datosSimulacion.valor_hora_50 = 0;
+        }
+
+        datosSimulacion.fijos_raw = data.haberes_fijos.filter(h => h.codigo !== COD_HE_25 && h.codigo !== COD_HE_50);
+
+        const select = document.getElementById('selectAdicional');
+        select.innerHTML = '<option value="">Seleccione bono...</option>';
+        if (data.catalogo_adicionales.length === 0) {
+             select.innerHTML += `<option value="" disabled>No hay bonos ocasionales disponibles</option>`;
+        } else {
+            data.catalogo_adicionales.forEach(h => {
+                select.innerHTML += `<option value="${h.nombre}" data-monto="0">${h.nombre}</option>`;
+            });
+        }
+
+        recalcularVisual();
+    }
+
+    // ==============================================================
+    // LÓGICA ACTUALIZADA: REGLAS DE TÍTULO E INGRESO RECIENTE
+    // ==============================================================
+    function recalcularVisual() {
+        const tieneTitulo = document.getElementById('checkTitulo').checked;
+        const esReciente = document.getElementById('checkReciente').checked; // NUEVA VARIABLE
+
+        let fijosFiltrados = datosSimulacion.fijos_raw.filter(h => {
+            const codigoActual = h.codigo.trim(); 
+
+            // REGLA 1: ASIGNACIÓN PROFESIONAL
+            // Solo se paga si TIENE título.
+            if (codigoActual === COD_ASIG_PROF) {
+                if (!tieneTitulo) return false;
+            }
+
+            // REGLA 2: ASIGNACIÓN DIRECTIVO/JEFATURA
+            // Se pierde si:
+            // a) Tiene título (porque se le paga la Profesional en su lugar).
+            // b) Es de ingreso reciente (aunque no tenga título, no califica por antigüedad).
+            if (codigoActual === COD_ASIG_JEF) {
+                if (tieneTitulo) return false;  // Prefiere Profesional
+                if (esReciente) return false;   // No califica por antigüedad
+            }
+
+            return true; 
+        });
+
+        renderTablaFijos(fijosFiltrados);
+        calcularTotal(fijosFiltrados);
+    }
+
+    function renderTablaFijos(listaHaberes) {
+        const tbody = document.getElementById('tablaFijos');
+        tbody.innerHTML = '';
+        let subtotal = 0;
+
+        if (datosSimulacion.base > 0) {
+            tbody.innerHTML += `<tr><td class="fw-bold text-primary">Sueldo Base</td><td class="text-end fw-bold">$${datosSimulacion.base.toLocaleString()}</td></tr>`;
+            subtotal += datosSimulacion.base;
+        } else {
+            tbody.innerHTML += `<tr><td colspan="2" class="text-center text-danger small">⚠ Sueldo base no definido</td></tr>`;
+        }
+
+        listaHaberes.forEach(h => {
+            tbody.innerHTML += `<tr><td>${h.nombre}</td><td class="text-end">$${h.monto.toLocaleString()}</td></tr>`;
+            subtotal += h.monto;
+        });
+
+        document.getElementById('subtotalFijo').innerText = '$' + subtotal.toLocaleString();
+    }
+
+    function calcularTotal(listaHaberes) {
+        if (!listaHaberes) {
+            // Replicamos la lógica de filtro si no viene la lista
+            const tieneTitulo = document.getElementById('checkTitulo').checked;
+            const esReciente = document.getElementById('checkReciente').checked;
+            
+            listaHaberes = datosSimulacion.fijos_raw.filter(h => {
+                const codigoActual = h.codigo.trim();
+                if (codigoActual === COD_ASIG_PROF && !tieneTitulo) return false;
+                if (codigoActual === COD_ASIG_JEF && (tieneTitulo || esReciente)) return false;
+                return true;
+            });
+        }
+
+        let total = datosSimulacion.base;
+        listaHaberes.forEach(h => total += h.monto);
+
+        const hrs25 = parseFloat(document.getElementById('inputCant25').value) || 0;
+        const hrs50 = parseFloat(document.getElementById('inputCant50').value) || 0;
+        const montoHE = Math.round((hrs25 * datosSimulacion.valor_hora_25) + (hrs50 * datosSimulacion.valor_hora_50));
+        
+        document.getElementById('totalExtras').innerText = '$' + montoHE.toLocaleString();
+        total += montoHE;
+
+        datosSimulacion.adicionales_seleccionados.forEach(a => total += a.monto);
+        document.getElementById('totalFinal').innerText = '$' + total.toLocaleString();
+    }
+
+    // Funciones Adicionales
+    function agregarAdicional() {
+        const select = document.getElementById('selectAdicional');
+        const inputMonto = document.getElementById('montoAdicional');
+        const nombre = select.value;
+        const monto = parseInt(inputMonto.value);
+        if (!nombre || isNaN(monto) || monto <= 0) return;
+        datosSimulacion.adicionales_seleccionados.push({ nombre, monto });
+        renderAdicionales();
+        recalcularVisual();
+        select.value = ""; inputMonto.value = "";
+    }
+
+    function borrarAdicional(idx) {
+        datosSimulacion.adicionales_seleccionados.splice(idx, 1);
+        renderAdicionales();
+        recalcularVisual();
+    }
+
+    function renderAdicionales() {
+        const ul = document.getElementById('listaAdicionales');
+        ul.innerHTML = '';
+        datosSimulacion.adicionales_seleccionados.forEach((item, idx) => {
+            ul.innerHTML += `
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-1 bg-transparent border-bottom">
+                    <span class="small">${item.nombre}</span>
+                    <div>
+                        <span class="fw-bold text-success small me-2">+$${item.monto.toLocaleString()}</span>
+                        <button class="btn btn-xs btn-outline-danger py-0 px-1" onclick="borrarAdicional(${idx})">&times;</button>
+                    </div>
+                </li>
+            `;
+        });
+    }
+</script>
+{% endblock %}

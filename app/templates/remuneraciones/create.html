@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        
+        <form action="{{ url_for('remuneraciones_bp.crear_escala') }}" method="POST">
+            
+            <div class="card shadow mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Definir Nueva Escala</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Fecha de Vigencia</label>
+                            <input type="date" name="fecha_vigencia" class="form-control" required>
+                            <div class="form-text">Desde cuándo aplica este sueldo.</div>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold">Estamento</label>
+                            <select name="estamento_id" class="form-select" required>
+                                <option value="">Seleccione...</option>
+                                {% for est in estamentos %}
+                                    <option value="{{ est.id }}">{{ est.estamento }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Grado</label>
+                            <input type="number" name="grado" class="form-control" placeholder="Ej: 15" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow">
+                <div class="card-header bg-light">
+                    <strong class="text-secondary">Desglose de Haberes (Valores en Pesos)</strong>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50%;">Ítem / Haber</th>
+                                <th>Tipo</th>
+                                <th>Monto ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h in haberes %}
+                            <tr>
+                                <td>
+                                    <strong>{{ h.nombre }}</strong>
+                                    {% if h.codigo == 'SUELDO_BASE' %}
+                                        <span class="badge bg-primary ms-2">Base</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if h.es_imponible %}
+                                        <span class="badge bg-success" title="Imponible">IMP</span>
+                                    {% endif %}
+                                    {% if h.es_tributable %}
+                                        <span class="badge bg-warning text-dark" title="Tributable">TRIB</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" 
+                                               name="monto_{{ h.id }}" 
+                                               class="form-control text-end input-monto" 
+                                               value="0" 
+                                               min="0">
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="2" class="text-end fw-bold fs-5">Total Bruto Estimado:</td>
+                                <td class="fw-bold fs-5 text-end text-success" id="totalDisplay">$0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="card-footer text-end">
+                    <a href="{{ url_for('remuneraciones_bp.index') }}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-save"></i> Guardar Escala
+                    </button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('.input-monto');
+        const totalDisplay = document.getElementById('totalDisplay');
+
+        function calcularTotal() {
+            let total = 0;
+            inputs.forEach(input => {
+                total += parseInt(input.value) || 0;
+            });
+            totalDisplay.innerText = '$' + total.toLocaleString('es-CL');
+        }
+
+        inputs.forEach(input => {
+            input.addEventListener('input', calcularTotal);
+        });
+    });
+</script>
+{% endblock %}

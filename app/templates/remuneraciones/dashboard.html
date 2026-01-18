@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0 fw-bold text-dark">Gestión de Escalas de Remuneraciones</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('remuneraciones_bp.simulador') }}" class="btn btn-success fw-bold shadow-sm">
+            <i class="bi bi-calculator"></i> Simulador de Sueldos
+        </a>
+        
+        <a href="{{ url_for('catalogos_bp.index') }}" class="btn btn-warning fw-bold shadow-sm">
+            <i class="bi bi-layers-fill"></i> Configurar Rangos
+        </a>
+        
+        <a href="{{ url_for('remuneraciones_bp.gestionar_haberes') }}" class="btn btn-info text-white fw-bold shadow-sm">
+            <i class="bi bi-tags-fill"></i> Catálogo de Haberes
+        </a>
+    </div>
+</div>
+
+<div class="row mb-5">
+    
+    <div class="col-md-6">
+        <div class="card shadow border-0 h-100">
+            <div class="card-header text-white fw-bold py-3" style="background-color: #6f42c1;">
+                <i class="bi bi-files"></i> Opción A: Clonar / Reajuste Masivo
+            </div>
+            <div class="card-body bg-light">
+                <p class="text-muted small">
+                    Copia los sueldos de un mes anterior. Puede aplicar un % de aumento a <strong>todos</strong> o a un <strong>rango específico</strong> de grados.
+                </p>
+                
+                <form action="{{ url_for('remuneraciones_bp.clonar_periodo') }}" method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <label class="form-label fw-bold small">1. Basarse en (Origen):</label>
+                            <select name="fecha_origen" class="form-select" required>
+                                <option value="">Seleccione...</option>
+                                {% for item in fechas %}
+                                    <option value="{{ item[0] }}">{{ item[0].strftime('%d-%m-%Y') }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold small">2. Nueva Fecha:</label>
+                            <input type="date" name="fecha_destino" class="form-control" required>
+                        </div>
+
+                        <hr class="my-2 text-muted">
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-primary">% Aumento:</label>
+                            <div class="input-group">
+                                <input type="number" step="0.1" min="0" name="porcentaje" class="form-control fw-bold" value="0" required>
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-secondary">Grado Inicial:</label>
+                            <input type="number" name="grado_min" class="form-control" value="1" min="1" required>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-secondary">Grado Final:</label>
+                            <input type="number" name="grado_max" class="form-control" value="20" min="1"  max="20" required>
+                        </div>
+                        
+                        <div class="col-12 mt-3">
+                            <button type="submit" class="btn text-white w-100 fw-bold" style="background-color: #6610f2;">
+                                <i class="bi bi-lightning-charge-fill"></i> Ejecutar Clonación
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow border-0 h-100">
+            <div class="card-header bg-dark text-white fw-bold py-3">
+                <i class="bi bi-file-earmark-plus"></i> Opción B: Crear Matriz Desde Cero
+            </div>
+            <div class="card-body bg-light">
+                <p class="text-muted small">
+                    Genera una tabla maestra vacía con <strong>todos los grados</strong> de todos los estamentos configurados.
+                </p>
+
+                <form action="{{ url_for('remuneraciones_bp.generar_plantilla') }}" method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold small">1. Fecha Inicio (Vigencia):</label>
+                            <input type="date" name="fecha_inicio" class="form-control" required>
+                        </div>
+                        <div class="col-12 mt-4">
+                            <button type="submit" class="btn btn-dark w-100 fw-bold">
+                                <i class="bi bi-table"></i> Crear Matriz Completa
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 text-muted">Historial de Escalas Disponibles</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Periodo (Inicio - Fin)</th>
+                        <th>Estado</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in fechas %}
+                        {% set f_inicio = item[0] %}
+                        {% set f_fin = item[1] %}
+                        
+                        {% set str_inicio = f_inicio.strftime('%Y-%m-%d') %}
+                        {% set str_fin = f_fin.strftime('%Y-%m-%d') if f_fin else '' %}
+
+                    <tr>
+                        <td class="ps-4">
+                            <i class="bi bi-calendar-range text-primary me-2"></i>
+                            <strong>{{ f_inicio.strftime('%d-%m-%Y') }}</strong>
+                            
+                            {% if f_fin %}
+                                <span class="text-muted mx-2">hasta</span>
+                                <strong>{{ f_fin.strftime('%d-%m-%Y') }}</strong>
+                            {% else %}
+                                <span class="text-success mx-2 fw-bold">→ Presente</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if f_fin %}
+                                <span class="badge bg-secondary">Cerrada / Histórica</span>
+                            {% else %}
+                                <span class="badge bg-success animate__animated animate__pulse animate__infinite">VIGENTE</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="{{ url_for('remuneraciones_bp.ver_matriz', fecha_vigencia=f_inicio) }}" class="btn btn-sm text-white fw-bold me-1" style="background-color: #6610f2;" title="Ver Matriz">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+
+                            <button type="button" class="btn btn-sm btn-warning fw-bold me-1 text-dark" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#modalEditarFecha" 
+                                    onclick="prepararEdicionFecha('{{ str_inicio }}', '{{ str_fin }}')"
+                                    title="Modificar Vigencia (Inicio/Fin)">
+                                <i class="bi bi-calendar-week"></i>
+                            </button>
+
+                            <form action="{{ url_for('remuneraciones_bp.eliminar_periodo') }}" method="POST" class="d-inline" onsubmit="return confirm('⚠️ PRECAUCIÓN\n\n¿Eliminar escala del {{ f_inicio.strftime('%d-%m-%Y') }}?\n\nSe perderán todos los datos asociados.');">
+                                <input type="hidden" name="fecha_vigencia" value="{{ f_inicio }}">
+                                <button type="submit" class="btn btn-sm btn-danger fw-bold" title="Eliminar Periodo">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-center py-5 text-muted">
+                            No hay escalas registradas aún.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditarFecha" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-pencil-square"></i> Modificar Vigencia</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('remuneraciones_bp.actualizar_fecha_vigencia') }}" method="POST">
+                <div class="modal-body">
+                    <div class="alert alert-warning small mb-3">
+                        <i class="bi bi-exclamation-triangle-fill"></i> 
+                        Estás editando las fechas de una escala existente.
+                    </div>
+                    
+                    <input type="hidden" name="fecha_actual" id="inputFechaActual">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Fecha de Inicio</label>
+                        <input type="date" name="fecha_inicio" id="inputFechaInicio" class="form-control fw-bold border-dark" required>
+                        <div class="form-text small">Desde cuándo rige esta escala.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Fecha de Término (Opcional)</label>
+                        <input type="date" name="fecha_fin" id="inputFechaFin" class="form-control">
+                        <div class="form-text small">
+                            Déjalo vacío si esta escala debe quedar <strong>VIGENTE</strong> indefinidamente.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-dark fw-bold">
+                        <i class="bi bi-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function prepararEdicionFecha(fechaInicio, fechaFin) {
+        // Asignar al input oculto (ID original)
+        document.getElementById('inputFechaActual').value = fechaInicio;
+        
+        // Asignar al input de Inicio (Valor editable)
+        document.getElementById('inputFechaInicio').value = fechaInicio;
+        
+        // Asignar al input de Fin (Puede estar vacío)
+        document.getElementById('inputFechaFin').value = fechaFin; 
+    }
+</script>
+
+{% endblock %}

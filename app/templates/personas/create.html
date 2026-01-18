@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-11">
+        
+        <div class="card shadow border-0">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-person-plus-fill"></i> Registrar Nuevo Funcionario</h4>
+                <small class="badge bg-white text-primary">NEXU-MUNI v1.0</small>
+            </div>
+            <div class="card-body bg-light">
+                
+                <form action="{{ url_for('web_bp.crear_persona') }}" method="POST">
+                    
+                    <div class="card mb-3 shadow-sm border-start border-primary border-4">
+                        <div class="card-header bg-white fw-bold text-primary">1. Identificación Personal</div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small">RUT</label>
+                                    <input type="text" name="rut" id="rut" class="form-control" 
+                                           placeholder="12.345.678-9" maxlength="12" 
+                                           oninput="formatearRut(this)" value="{{ request.form.get('rut', '') }}" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small">Fecha Nacimiento</label>
+                                    <input type="date" name="fecha_nacimiento" class="form-control" 
+                                           value="{{ request.form.get('fecha_nacimiento', '') }}" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small">Nacionalidad</label>
+                                    <input type="text" name="nacionalidad" class="form-control" 
+                                           value="{{ request.form.get('nacionalidad', 'Chilena') }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small">Sexo</label>
+                                    <select name="sexo_id" class="form-select" required>
+                                        <option value="">Seleccione...</option>
+                                        {% for s in sexos %}
+                                            <option value="{{ s.id }}" {% if request.form.get('sexo_id')|int == s.id %}selected{% endif %}>
+                                                {{ s.descripcion }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small">Nombres</label>
+                                    <input type="text" name="nombres" class="form-control" 
+                                           value="{{ request.form.get('nombres', '') }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small">Apellido Paterno</label>
+                                    <input type="text" name="apellido_paterno" class="form-control" 
+                                           value="{{ request.form.get('apellido_paterno', '') }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small">Apellido Materno</label>
+                                    <input type="text" name="apellido_materno" class="form-control" 
+                                           value="{{ request.form.get('apellido_materno', '') }}" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3 shadow-sm border-start border-primary border-4">
+                        <div class="card-header bg-white fw-bold text-primary">2. Contacto y Residencia</div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small">Dirección Particular</label>
+                                    <input type="text" name="direccion" class="form-control" 
+                                           placeholder="Calle, Número, Villa..." value="{{ request.form.get('direccion', '') }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small">Comuna</label>
+                                    <input type="text" name="comuna_residencia" class="form-control" 
+                                           value="{{ request.form.get('comuna_residencia', 'Santa Juana') }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold small">Teléfono</label>
+                                    <input type="text" name="telefono" class="form-control" 
+                                           placeholder="+569..." value="{{ request.form.get('telefono', '') }}">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold small">Email Institucional</label>
+                                    <input type="email" name="email" class="form-control" 
+                                           placeholder="funcionario@santajuana.cl" value="{{ request.form.get('email', '') }}" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3 shadow-sm h-100 border-start border-success border-4">
+                                <div class="card-header bg-white fw-bold text-success">3. Perfil Académico</div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">Nivel de Estudios</label>
+                                        <select name="nivel_estudios_id" class="form-select">
+                                            <option value="">Seleccione...</option>
+                                            {% for n in niveles_estudios %}
+                                                <option value="{{ n.id }}" {% if request.form.get('nivel_estudios_id')|int == n.id %}selected{% endif %}>
+                                                    {{ n.descripcion }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">Título Profesional / Oficio</label>
+                                        <input type="text" name="titulo_profesional" class="form-control" 
+                                               placeholder="Ej: Ingeniero" maxlength="100"
+                                               value="{{ request.form.get('titulo_profesional', '') }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card mb-3 shadow-sm h-100 border-start border-info border-4">
+                                <div class="card-header bg-white fw-bold text-info">4. Datos Bancarios</div>
+                                <div class="card-body">
+                                    <div class="row g-2">
+                                        <div class="col-md-12">
+                                            <label class="form-label fw-bold small">Banco</label>
+                                            <select name="banco_nombre" class="form-select">
+                                                <option value="">Seleccione...</option>
+                                                {% set bancos = ['Banco Estado', 'Banco de Chile', 'BCI', 'Santander', 'Scotiabank', 'Itaú'] %}
+                                                {% for banco in bancos %}
+                                                    <option value="{{ banco }}" {% if request.form.get('banco_nombre') == banco %}selected{% endif %}>{{ banco }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold small">Tipo Cuenta</label>
+                                            <select name="tipo_cuenta" class="form-select">
+                                                <option value="">Seleccione...</option>
+                                                {% set tipos = ['Cuenta Rut', 'Cuenta Corriente', 'Cuenta Vista', 'Ahorro'] %}
+                                                {% for tipo in tipos %}
+                                                    <option value="{{ tipo }}" {% if request.form.get('tipo_cuenta') == tipo %}selected{% endif %}>{{ tipo }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold small">N° Cuenta</label>
+                                            <input type="text" name="numero_cuenta" class="form-control" 
+                                                   value="{{ request.form.get('numero_cuenta', '') }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4 shadow-sm border-start border-secondary border-4">
+                        <div class="card-header bg-white fw-bold text-secondary">5. Datos Administrativos e Inclusión</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 border-end">
+                                    <label class="form-label fw-bold small text-muted mb-3">Situación de Discapacidad</label>
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" name="es_discapacitado" id="checkDiscapacidad" value="1" 
+                                               {% if request.form.get('es_discapacitado') %}checked{% endif %}>
+                                        <label class="form-check-label" for="checkDiscapacidad">Presenta Discapacidad</label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="tiene_credencial_compin" id="checkCredencial" value="1" 
+                                               {% if request.form.get('tiene_credencial_compin') %}checked{% endif %}>
+                                        <label class="form-check-label" for="checkCredencial">Tiene Credencial COMPIN</label>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold">Tipo de Discapacidad</label>
+                                        <input type="text" name="tipo_discapacidad" class="form-control form-control-sm" 
+                                               value="{{ request.form.get('tipo_discapacidad', '') }}">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold">% Discapacidad</label>
+                                        <input type="number" name="porcentaje_discapacidad" class="form-control form-control-sm" 
+                                               min="0" max="100" value="{{ request.form.get('porcentaje_discapacidad', '0') }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="row">
+                                        <div class="col-12 mb-3">
+                                            <label class="form-label fw-bold small text-primary">Fecha Ingreso Municipio</label>
+                                            <input type="date" name="fecha_ingreso_municipio" class="form-control" 
+                                                   value="{{ request.form.get('fecha_ingreso_municipio', '') }}">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label fw-bold small text-success">Fecha Ingreso Sector Público</label>
+                                            <input type="date" name="fecha_ingreso_sector_publico" class="form-control" 
+                                                   value="{{ request.form.get('fecha_ingreso_sector_publico', '') }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pb-4">
+                        <a href="{{ url_for('web_bp.listar_personas') }}" class="btn btn-outline-secondary px-4 fw-bold">Cancelar</a>
+                        <button type="submit" class="btn btn-success px-5 fw-bold shadow">
+                            <i class="bi bi-save"></i> Registrar Funcionario
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function formatearRut(rutInput) {
+        let actual = rutInput.value.replace(/^0+/, "");
+        let rutPuro = actual.replace(/[^0-9kK]/g, "");
+        if (rutPuro.length <= 1) {
+            rutInput.value = rutPuro;
+            return;
+        }
+        let cuerpo = rutPuro.slice(0, -1);
+        let dv = rutPuro.slice(-1).toUpperCase();
+        rutInput.value = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + dv;
+    }
+</script>
+{% endblock %}
