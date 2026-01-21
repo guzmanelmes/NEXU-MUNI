@@ -1,4 +1,3 @@
-# app/models/remuneraciones.py
 from app.extensions import db
 
 # =======================================================
@@ -7,6 +6,7 @@ from app.extensions import db
 # =======================================================
 haber_estamento = db.Table('haber_estamento',
     db.Column('haber_id', db.Integer, db.ForeignKey('config_tipo_haberes.id'), primary_key=True),
+    # Nota: Aquí se usa el nombre de la TABLA SQL ('cat_estamentos'), eso está correcto en plural.
     db.Column('estamento_id', db.Integer, db.ForeignKey('cat_estamentos.id'), primary_key=True)
 )
 
@@ -39,8 +39,9 @@ class ConfigTipoHaberes(db.Model):
     formula = db.Column(db.String(255), nullable=True) 
 
     # RELACIÓN: Un haber puede estar habilitado para muchos estamentos
+    # CORRECCIÓN: Cambiado 'CatEstamentos' a 'CatEstamento' (Singular)
     estamentos_habilitados = db.relationship(
-        'CatEstamentos', 
+        'CatEstamento', 
         secondary=haber_estamento, 
         backref=db.backref('haberes_disponibles', lazy='dynamic')
     )
@@ -56,7 +57,9 @@ class EscalaRemuneraciones(db.Model):
     fecha_fin = db.Column(db.Date, nullable=True)
 
     # Relaciones
-    estamento = db.relationship('CatEstamentos', backref='escalas')
+    # CORRECCIÓN: Cambiado 'CatEstamentos' a 'CatEstamento' (Singular)
+    estamento = db.relationship('CatEstamento', backref='escalas')
+    
     # Relación "Uno a Muchos": Una escala tiene muchos detalles
     detalles = db.relationship('EscalaRemuneracionesDetalle', backref='escala', cascade="all, delete-orphan")
 

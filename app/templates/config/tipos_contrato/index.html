@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="bi bi-gear-fill text-secondary"></i> Configuración de Contratos
+        </h1>
+        <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTipo" onclick="limpiarFormulario()">
+            <i class="bi bi-plus-lg"></i> Nuevo Tipo
+        </button>
+    </div>
+
+    <div class="card shadow mb-4 border-top border-primary border-3">
+        <div class="card-header py-3 bg-white">
+            <h6 class="m-0 fw-bold text-primary">Catálogo de Formatos y Plantillas</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nombre del Tipo</th>
+                            <th class="text-center">Jornada</th>
+                            <th class="text-center">Asistencia</th>
+                            <th>Plantilla Word (.docx)</th>
+                            <th class="text-center" style="width: 150px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in tipos %}
+                        <tr>
+                            <td class="fw-bold">{{ t.nombre }}</td>
+                            <td class="text-center">
+                                {% if t.es_jornada_completa %}
+                                    <span class="badge bg-success">Completa (44h)</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Parcial / Otro</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if t.usa_asistencia %}
+                                    <i class="bi bi-check-circle-fill text-success" title="Requiere Libro"></i>
+                                {% else %}
+                                    <i class="bi bi-x-circle-fill text-muted" title="Exento"></i>
+                                {% endif %}
+                            </td>
+                            <td class="font-monospace small text-primary">
+                                <i class="bi bi-file-earmark-word-fill"></i> {{ t.plantilla_word }}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-info text-white" 
+                                            onclick="editarTipo('{{ t.id }}', '{{ t.nombre }}', '{{ t.es_jornada_completa }}', '{{ t.usa_asistencia }}', '{{ t.plantilla_word }}')"
+                                            data-bs-toggle="modal" data-bs-target="#modalTipo"
+                                            title="Editar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    
+                                    <form action="{{ url_for('config_contratos_bp.eliminar', id=t.id) }}" method="POST" onsubmit="return confirm('¿Estás seguro de eliminar este tipo de contrato?');" style="display:inline;">
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Eliminar">
+                                            <i class="bi bi-trash-fill"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="modal fade" id="modalTipo" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="{{ url_for('config_contratos_bp.guardar') }}" method="POST" enctype="multipart/form-data">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold" id="modalTitulo">Gestión de Tipo de Contrato</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="tipo_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre descriptivo</label>
+                        <input type="text" name="nombre" id="tipo_nombre" class="form-control" placeholder="Ej: Honorario Experto" required>
+                    </div>
+
+                    <div class="card bg-light border-0 mb-3">
+                        <div class="card-body">
+                            <h6 class="small fw-bold text-secondary mb-2">Reglas de Negocio</h6>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="es_jornada_completa" id="check_jornada">
+                                <label class="form-check-label" for="check_jornada">Es Jornada Completa (44 hrs)</label>
+                                <div class="form-text small">Si se marca, el sistema asume 44 horas fijas.</div>
+                            </div>
+                            
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="usa_asistencia" id="check_asistencia">
+                                <label class="form-check-label" for="check_asistencia">Exige registro de asistencia</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Plantilla Word (.docx)</label>
+                        <input type="file" name="plantilla_word" class="form-control" accept=".docx">
+                        <small class="text-primary fw-bold mt-1 d-block" id="archivo_actual_txt"></small>
+                        <div class="form-text">Deje vacío si no desea cambiar el archivo actual.</div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold">Guardar Cambios</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function limpiarFormulario() {
+        document.getElementById('modalTitulo').innerText = 'Nuevo Tipo de Contrato';
+        document.getElementById('tipo_id').value = '';
+        document.getElementById('tipo_nombre').value = '';
+        document.getElementById('check_jornada').checked = false;
+        document.getElementById('check_asistencia').checked = true;
+        document.getElementById('archivo_actual_txt').innerText = '';
+    }
+
+    function editarTipo(id, nombre, jornada, asistencia, archivo) {
+        document.getElementById('modalTitulo').innerText = 'Editar Tipo de Contrato';
+        document.getElementById('tipo_id').value = id;
+        document.getElementById('tipo_nombre').value = nombre;
+        
+        // Convertir string de Python 'True'/'False' a booleano
+        document.getElementById('check_jornada').checked = (jornada === 'True');
+        document.getElementById('check_asistencia').checked = (asistencia === 'True');
+        
+        // Mostrar nombre del archivo actual para referencia
+        document.getElementById('archivo_actual_txt').innerText = 'Archivo actual: ' + archivo;
+    }
+</script>
+{% endblock %}

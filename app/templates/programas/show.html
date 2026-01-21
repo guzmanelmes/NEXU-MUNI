@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Detalle Presupuestario</h1>
+            <p class="mb-0 text-muted">Programa: <strong>{{ programa.nombre }}</strong></p>
+        </div>
+        <div>
+            <a href="{{ url_for('programas_bp.editar_programa', id=programa.id) }}" class="btn btn-warning shadow-sm fw-bold text-dark">
+                <i class="bi bi-pencil-square"></i> Editar
+            </a>
+            <a href="{{ url_for('programas_bp.listar') }}" class="btn btn-secondary shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    {% set total_inicial = programa.cuentas | sum(attribute='monto_inicial') %}
+    {% set total_saldo = programa.cuentas | sum(attribute='saldo_actual') %}
+    {% set total_gastado = total_inicial - total_saldo %}
+    {% set porcentaje_uso = (total_gastado / total_inicial * 100) if total_inicial > 0 else 0 %}
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-left-primary shadow h-100 py-2 border-start border-primary border-4">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Presupuesto Decreto</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">${{ "{:,.0f}".format(total_inicial).replace(',', '.') }}</div>
+                    <small class="text-muted">N° Decreto: {{ programa.numero_decreto }} ({{ programa.fecha_decreto.strftime('%d/%m/%Y') }})</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-left-danger shadow h-100 py-2 border-start border-danger border-4">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total Comprometido</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">${{ "{:,.0f}".format(total_gastado).replace(',', '.') }}</div>
+                    <div class="progress progress-sm mt-2">
+                        <div class="progress-bar bg-danger" role="progressbar" style="width: {{ porcentaje_uso }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-left-success shadow h-100 py-2 border-start border-success border-4">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Saldo Disponible (Real)</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">${{ "{:,.0f}".format(total_saldo).replace(',', '.') }}</div>
+                    <small class="text-success fw-bold"><i class="bi bi-check-circle"></i> Apto para contratar</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 fw-bold text-primary"><i class="bi bi-pie-chart-fill"></i> Estado de Cuentas</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Código</th>
+                                    <th class="text-end">Inicial</th>
+                                    <th class="text-end">Saldo Actual</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for c in programa.cuentas %}
+                                <tr>
+                                    <td class="font-monospace small">{{ c.codigo }}</td>
+                                    <td class="text-end text-muted small">${{ "{:,.0f}".format(c.monto_inicial).replace(',', '.') }}</td>
+                                    <td class="text-end fw-bold {{ 'text-danger' if c.saldo_actual < 100000 else 'text-success' }}">
+                                        ${{ "{:,.0f}".format(c.saldo_actual).replace(',', '.') }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 fw-bold text-info"><i class="bi bi-clock-history"></i> Historial de Gastos</h6>
+                    <span class="badge bg-info">{{ contratos|length }} contratos</span>
+                </div>
+                <div class="card-body">
+                    {% if contratos %}
+                        <div class="list-group list-group-flush">
+                            {% for con in contratos %}
+                            <a href="#" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1 fw-bold text-dark">{{ con.persona.nombres }} {{ con.persona.apellido_paterno }}</h6>
+                                    <small class="text-danger fw-bold">-${{ "{:,.0f}".format(con.monto_total).replace(',', '.') }}</small>
+                                </div>
+                                <p class="mb-1 small text-muted">{{ con.tipo.nombre }}</p>
+                                <small class="text-xs text-muted">
+                                    <i class="bi bi-calendar"></i> {{ con.fecha_inicio.strftime('%d/%m/%y') }} - {{ con.fecha_fin.strftime('%d/%m/%y') }}
+                                </small>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-emoji-smile fs-1"></i>
+                            <p class="mt-2">Aún no hay contratos cargados a este programa.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

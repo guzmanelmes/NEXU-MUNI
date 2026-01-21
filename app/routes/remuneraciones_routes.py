@@ -1,10 +1,10 @@
-# app/routes/remuneraciones_routes.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from app.extensions import db
 from app.services.remuneraciones_service import RemuneracionesService
 from app.services.catalogos_service import CatalogosService
 from app.models.remuneraciones import ConfigTipoHaberes
-from app.models.catalogos import CatEstamentos 
+# CORRECCIÓN: Importar CatEstamento (Singular)
+from app.models.catalogos import CatEstamento 
 
 remuneraciones_bp = Blueprint('remuneraciones_bp', __name__, url_prefix='/remuneraciones')
 
@@ -176,7 +176,8 @@ def gestionar_haberes():
 
             haber.estamentos_habilitados = [] 
             for eid in estamentos_ids:
-                est = CatEstamentos.query.get(eid)
+                # CORRECCIÓN: Usar modelo en Singular
+                est = CatEstamento.query.get(eid)
                 if est:
                     haber.estamentos_habilitados.append(est)
             
@@ -270,11 +271,11 @@ def api_valores_grado():
     except Exception as e:
         return {'error': str(e)}, 500
 
-# --- ACTUALIZAR FECHA VIGENCIA ---
+# --- ACTUALIZAR FECHA VIGENCIA (NUEVO) ---
 @remuneraciones_bp.route('/actualizar_fecha_vigencia', methods=['POST'])
 def actualizar_fecha_vigencia():
     try:
-        fecha_actual = request.form.get('fecha_actual')       # ID original
+        fecha_actual = request.form.get('fecha_actual')       # ID original (fecha vieja)
         fecha_nueva_inicio = request.form.get('fecha_inicio') # Nuevo Inicio
         fecha_nueva_fin = request.form.get('fecha_fin')       # Nuevo Fin (puede ser vacío)
         

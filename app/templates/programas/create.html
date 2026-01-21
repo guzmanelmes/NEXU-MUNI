@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">
+        <i class="bi bi-wallet2 text-primary"></i> Nuevo Programa Presupuestario
+    </h1>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 bg-primary text-white">
+            <h6 class="m-0 fw-bold">Datos del Decreto y Presupuesto</h6>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('programas_bp.nuevo_programa') }}" method="POST" id="form-programa">
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Nombre del Programa</label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej: Gestión Territorial" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">N° Decreto</label>
+                        <input type="text" name="numero_decreto" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Fecha Decreto</label>
+                        <input type="date" name="fecha_decreto" class="form-control" required>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="text-secondary fw-bold"><i class="bi bi-list-ol"></i> Distribución de Cuentas</h5>
+                    <button type="button" class="btn btn-sm btn-success" id="btn-add-cuenta">
+                        <i class="bi bi-plus-circle"></i> Agregar Cuenta
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered bg-light">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 50%;">Código Presupuestario</th>
+                                <th style="width: 40%;">Monto Inicial ($)</th>
+                                <th style="width: 10%;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contenedor-cuentas">
+                            <tr class="fila-cuenta">
+                                <td>
+                                    <input type="text" name="cuenta_codigo[]" class="form-control font-monospace" placeholder="Ej: 215.21.04.004.001" required>
+                                </td>
+                                <td>
+                                    <input type="number" name="cuenta_monto[]" class="form-control" placeholder="0" required min="1">
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-danger btn-sm" disabled><i class="bi bi-trash"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{{ url_for('programas_bp.listar') }}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary fw-bold">
+                        <i class="bi bi-save"></i> Guardar Programa
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('btn-add-cuenta').addEventListener('click', function() {
+        const contenedor = document.getElementById('contenedor-cuentas');
+        const nuevaFila = `
+            <tr class="fila-cuenta">
+                <td><input type="text" name="cuenta_codigo[]" class="form-control font-monospace" required></td>
+                <td><input type="number" name="cuenta_monto[]" class="form-control" required min="1"></td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>`;
+        contenedor.insertAdjacentHTML('beforeend', nuevaFila);
+    });
+</script>
+{% endblock %}

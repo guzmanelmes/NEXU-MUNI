@@ -5,11 +5,14 @@
 
     <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
         <h1 class="h3 mb-0 text-gray-800">
-            <i class="bi bi-speedometer2"></i> Tablero de Gestión Municipal
+            <i class="bi bi-speedometer2 text-primary"></i> Tablero de Gestión Municipal
         </h1>
-        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-            <i class="bi bi-download"></i> Generar Reporte Global
-        </a>
+        <div class="d-none d-sm-inline-block">
+            <span class="small text-muted me-2">Última actualización: {{ fecha_actual }}</span>
+            <a href="#" class="btn btn-sm btn-primary shadow-sm disabled">
+                <i class="bi bi-download"></i> Reporte Ejecutivo (Pronto)
+            </a>
+        </div>
     </div>
 
     <div class="row">
@@ -20,11 +23,28 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Dotación Total</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_funcionarios }} Funcionarios</div>
+                                Dotación Personal</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_funcionarios }} <small class="text-muted">Personas</small></div>
                         </div>
                         <div class="col-auto">
-                            <i class="bi bi-people-fill fa-2x text-gray-300" style="font-size: 2rem;"></i>
+                            <i class="bi bi-people-fill text-gray-300" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-success border-4 shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Honorarios Vigentes</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_contratos }} <small class="text-muted">Contratos</small></div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-file-earmark-person-fill text-gray-300" style="font-size: 2rem;"></i>
                         </div>
                     </div>
                 </div>
@@ -37,28 +57,11 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Mujeres</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_mujeres }}</div>
+                                Programas Activos</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_programas }} <small class="text-muted">Cuentas</small></div>
                         </div>
                         <div class="col-auto">
-                            <i class="bi bi-gender-female fa-2x text-gray-300" style="font-size: 2rem;"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-start border-{{ color_viaticos }} border-4 shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-{{ color_viaticos }} text-uppercase mb-1">
-                                Sistema de Viáticos</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estado_viaticos }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="bi bi-cash-coin fa-2x text-gray-300" style="font-size: 2rem;"></i>
+                            <i class="bi bi-list-check text-gray-300" style="font-size: 2rem;"></i>
                         </div>
                     </div>
                 </div>
@@ -71,11 +74,11 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Solicitudes Pendientes</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">0</div>
+                                Saldo Disponible Global</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">${{ "{:,.0f}".format(saldo_total_global).replace(',', '.') }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="bi bi-hourglass-split fa-2x text-gray-300" style="font-size: 2rem;"></i>
+                            <i class="bi bi-wallet2 text-gray-300" style="font-size: 2rem;"></i>
                         </div>
                     </div>
                 </div>
@@ -86,37 +89,83 @@
     <div class="row">
         
         <div class="col-lg-6 mb-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Accesos Rápidos</h6>
+            <div class="card shadow mb-4 h-100">
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary"><i class="bi bi-lightning-charge"></i> Acciones Frecuentes</h6>
                 </div>
                 <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{{ url_for('web_bp.crear_persona') }}" class="btn btn-primary btn-lg text-start">
-                            <i class="bi bi-person-plus-fill me-2"></i> Ingresar Nuevo Funcionario
-                        </a>
-                        <a href="{{ url_for('viaticos_bp.configurar_escala') }}" class="btn btn-success btn-lg text-start">
-                            <i class="bi bi-gear-fill me-2"></i> Configurar Escala de Viáticos
-                        </a>
-                        <button class="btn btn-secondary btn-lg text-start" disabled>
-                            <i class="bi bi-file-earmark-text me-2"></i> Nueva Solicitud (Próximamente)
-                        </button>
+                    <div class="row g-2">
+                        
+                        <div class="col-md-6">
+                            <div class="d-grid gap-2">
+                                <a href="{{ url_for('nombramientos_bp.nuevo') }}" class="btn btn-outline-primary py-2 text-start">
+                                    <i class="bi bi-person-badge me-2"></i> Nuevo Nombramiento
+                                </a>
+                                <a href="{{ url_for('contratos_bp.nuevo_contrato') }}" class="btn btn-outline-success py-2 text-start">
+                                    <i class="bi bi-pen me-2"></i> Nuevo Contrato Honorario
+                                </a>
+                                <a href="{{ url_for('web_bp.crear_persona') }}" class="btn btn-outline-secondary py-2 text-start">
+                                    <i class="bi bi-person-plus me-2"></i> Registrar Persona
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="d-grid gap-2">
+                                <a href="{{ url_for('nombramientos_bp.listar') }}" class="btn btn-light border py-2 text-start text-muted">
+                                    <i class="bi bi-table me-2"></i> Ver Nombramientos
+                                </a>
+                                <a href="{{ url_for('contratos_bp.listar') }}" class="btn btn-light border py-2 text-start text-muted">
+                                    <i class="bi bi-collection me-2"></i> Ver Honorarios
+                                </a>
+                                <a href="{{ url_for('programas_bp.listar') }}" class="btn btn-light border py-2 text-start text-muted">
+                                    <i class="bi bi-wallet2 me-2"></i> Ver Billetera
+                                </a>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="col-lg-6 mb-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Novedades del Sistema</h6>
+            <div class="card shadow mb-4 h-100">
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 font-weight-bold text-secondary"><i class="bi bi-sliders"></i> Configuración Económica</h6>
                 </div>
                 <div class="card-body">
-                    <div class="text-center">
-                        <img class="img-fluid px-3 px-sm-4 mt-3 mb-4" style="width: 15rem;" src="https://startbootstrap.github.io/startbootstrap-sb-admin-2/img/undraw_posting_photo.svg" alt="...">
+                    <p class="small text-muted mb-3">Accesos directos a las tablas maestras del sistema.</p>
+                    
+                    <div class="list-group list-group-flush">
+                        <a href="{{ url_for('config_contratos_bp.listar') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center ps-0">
+                            <div>
+                                <i class="bi bi-file-earmark-word text-primary me-2"></i> Plantillas de Contratos
+                            </div>
+                            <span class="badge bg-light text-dark border">Word</span>
+                        </a>
+
+                        <a href="{{ url_for('remuneraciones_bp.index') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center ps-0">
+                            <div>
+                                <i class="bi bi-graph-up text-success me-2"></i> Escalas de Sueldo
+                            </div>
+                            <i class="bi bi-chevron-right text-gray-300"></i>
+                        </a>
+
+                        <a href="{{ url_for('viaticos_bp.listar_escala') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center ps-0">
+                            <div>
+                                <i class="bi bi-geo-alt text-danger me-2"></i> Escala de Viáticos
+                            </div>
+                            <i class="bi bi-chevron-right text-gray-300"></i>
+                        </a>
+
+                        <a href="{{ url_for('catalogos_bp.index') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center ps-0">
+                            <div>
+                                <i class="bi bi-list-check text-warning me-2"></i> Catálogos Generales (Grados, Sexo)
+                            </div>
+                            <i class="bi bi-chevron-right text-gray-300"></i>
+                        </a>
                     </div>
-                    <p>Bienvenido a <strong>NEXU-MUNI v1.0</strong>. El sistema se encuentra operativo para la gestión de Fichas de Personal y Configuración de Valores.</p>
-                    <p class="mb-0">Recuerde mantener actualizados los valores de la UTM y Escalas de Viáticos para asegurar cálculos correctos.</p>
                 </div>
             </div>
         </div>

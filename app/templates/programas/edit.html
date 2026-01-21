@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="bi bi-pencil-square text-warning"></i> Editar Programa
+        </h1>
+    </div>
+
+    <div class="card shadow mb-4 border-start border-warning border-4">
+        <div class="card-header py-3 bg-white">
+            <h6 class="m-0 fw-bold text-warning">Modificar Datos del Programa #{{ programa.id }}</h6>
+        </div>
+        <div class="card-body">
+            
+            <form action="{{ url_for('programas_bp.editar_programa', id=programa.id) }}" method="POST">
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted">Nombre del Programa</label>
+                        <input type="text" name="nombre" class="form-control font-weight-bold" value="{{ programa.nombre }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small text-muted">N° Decreto</label>
+                        <input type="text" name="numero_decreto" class="form-control" value="{{ programa.numero_decreto }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small text-muted">Fecha Decreto</label>
+                        <input type="date" name="fecha_decreto" class="form-control" value="{{ programa.fecha_decreto }}" required>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="mb-4">
+                    <h6 class="fw-bold text-secondary"><i class="bi bi-lock-fill"></i> Cuentas Presupuestarias Activas</h6>
+                    <p class="small text-muted mb-2">
+                        Estas cuentas ya están registradas. Para mantener la integridad financiera, no se pueden modificar sus montos iniciales aquí.
+                    </p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm bg-light">
+                            <thead class="table-secondary">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Monto Inicial</th>
+                                    <th>Saldo Actual</th>
+                                    <th class="text-center">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for c in programa.cuentas %}
+                                <tr>
+                                    <td>
+                                        <input type="text" class="form-control-plaintext font-monospace py-0" value="{{ c.codigo }}" readonly>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control-plaintext py-0" value="${{ '{:,.0f}'.format(c.monto_inicial).replace(',', '.') }}" readonly>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold {{ 'text-danger' if c.saldo_actual < 1000 else 'text-success' }}">
+                                            ${{ '{:,.0f}'.format(c.saldo_actual).replace(',', '.') }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <i class="bi bi-check-circle-fill text-success" title="Cuenta Activa"></i>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
+                    <h6 class="fw-bold text-success"><i class="bi bi-plus-circle"></i> Agregar Nuevas Cuentas (Suplementación)</h6>
+                    <button type="button" class="btn btn-sm btn-success shadow-sm" id="btn-add-cuenta">
+                        <i class="bi bi-plus-lg"></i> Agregar Fila
+                    </button>
+                </div>
+
+                <div class="table-responsive mb-4">
+                    <table class="table table-bordered border-success">
+                        <thead class="bg-success text-white">
+                            <tr>
+                                <th style="width: 50%;">Nuevo Código Presupuestario</th>
+                                <th style="width: 40%;">Monto a Asignar ($)</th>
+                                <th style="width: 10%;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contenedor-nuevas-cuentas">
+                            </tbody>
+                    </table>
+                    <div id="msg-vacio" class="text-center text-muted p-3 border border-dashed">
+                        <small><em>No se han agregado cuentas nuevas. Haga clic en "Agregar Fila" si desea ampliar el presupuesto.</em></small>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{{ url_for('programas_bp.ver_programa', id=programa.id) }}" class="btn btn-secondary">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-warning fw-bold text-dark shadow-sm">
+                        <i class="bi bi-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('btn-add-cuenta').addEventListener('click', function() {
+        // Ocultar mensaje de "vacio"
+        document.getElementById('msg-vacio').style.display = 'none';
+        
+        const contenedor = document.getElementById('contenedor-nuevas-cuentas');
+        
+        // Fíjate en los nombres: cuenta_codigo_nueva[] y cuenta_monto_nueva[]
+        // Estos coinciden con lo que espera el backend en programas_routes.py
+        const nuevaFila = `
+            <tr class="fila-nueva bg-white">
+                <td>
+                    <input type="text" name="cuenta_codigo_nueva[]" class="form-control font-monospace border-success" placeholder="Ej: 215.21.04.004.00X" required>
+                </td>
+                <td>
+                    <input type="number" name="cuenta_monto_nueva[]" class="form-control border-success" placeholder="0" required min="1">
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="eliminarFila(this)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        contenedor.insertAdjacentHTML('beforeend', nuevaFila);
+    });
+
+    function eliminarFila(boton) {
+        const fila = boton.closest('tr');
+        fila.remove();
+        
+        // Si no quedan filas, mostramos el mensaje de nuevo
+        const contenedor = document.getElementById('contenedor-nuevas-cuentas');
+        if (contenedor.children.length === 0) {
+            document.getElementById('msg-vacio').style.display = 'block';
+        }
+    }
+</script>
+{% endblock %}

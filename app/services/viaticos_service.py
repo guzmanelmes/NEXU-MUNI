@@ -1,4 +1,3 @@
-# app/services/viaticos_service.py
 from app.extensions import db
 from app.models.viaticos import EscalaViaticos
 from datetime import datetime, timedelta
@@ -125,5 +124,4 @@ class ViaticosService:
             
         except Exception as e:
             db.session.rollback()
-            # En un entorno real, aquí podrías registrar el error en un log
             raise e

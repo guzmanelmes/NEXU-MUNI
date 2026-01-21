@@ -1,8 +1,8 @@
-# app/services/remuneraciones_service.py
 from datetime import datetime, timedelta
 from app.extensions import db
 from app.models.remuneraciones import EscalaRemuneraciones, EscalaRemuneracionesDetalle, ConfigTipoHaberes, haber_estamento
-from app.models.catalogos import CatEstamentos
+# CORRECCIÓN: Importar CatEstamento (Singular)
+from app.models.catalogos import CatEstamento
 from sqlalchemy import desc
 
 class RemuneracionesService:
@@ -313,12 +313,13 @@ class RemuneracionesService:
 
     @staticmethod
     def generar_plantilla_vacia(fecha, estamento_id):
-        from app.models.catalogos import CatEstamentos 
+        # CORRECCIÓN: Singular CatEstamento
+        from app.models.catalogos import CatEstamento 
         
         # 1. CERRAR VIGENCIA ANTERIOR AUTOMÁTICAMENTE
         RemuneracionesService.cerrar_vigencia_anterior(fecha)
 
-        estamento = CatEstamentos.query.get(estamento_id)
+        estamento = CatEstamento.query.get(estamento_id)
         if not estamento:
             raise Exception("Estamento no encontrado")
 
@@ -525,10 +526,11 @@ class RemuneracionesService:
         4. Retorna catálogo de Ocasionales FILTRADO por Estamento.
         """
         # --- A) VALIDACIÓN Y CARGA DE ESTAMENTO ---
-        from app.models.catalogos import CatEstamentos
+        # CORRECCIÓN: Singular CatEstamento
+        from app.models.catalogos import CatEstamento
         from app.models.remuneraciones import haber_estamento
         
-        estamento = CatEstamentos.query.get(estamento_id)
+        estamento = CatEstamento.query.get(estamento_id)
         if not estamento:
             return {'error': 'Estamento no encontrado'}
             
@@ -606,7 +608,7 @@ class RemuneracionesService:
 
         query_filtrada = ConfigTipoHaberes.query \
             .join(ConfigTipoHaberes.estamentos_habilitados) \
-            .filter(CatEstamentos.id == estamento_id) \
+            .filter(CatEstamento.id == estamento_id) \
             .filter(ConfigTipoHaberes.es_permanente == False) \
             .filter(~ConfigTipoHaberes.codigo.in_(codigos_excluidos)) \
             .order_by(ConfigTipoHaberes.nombre) \

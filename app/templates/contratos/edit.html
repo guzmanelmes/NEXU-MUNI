@@ -1,0 +1,489 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <h1 class="h3 mb-0 text-gray-800"><i class="bi bi-pencil-square text-warning"></i> Editar Contrato #{{ contrato.id }}</h1>
+    </div>
+
+    <form action="{{ url_for('contratos_bp.editar_contrato', id=contrato.id) }}" method="POST" id="formContrato" onsubmit="event.preventDefault(); enviarFormularioAvanzado();">
+        
+        <input type="hidden" name="json_detalle_completo" id="input_json_completo">
+
+        <div class="card shadow mb-4 border-left-primary">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary">1. Datos del Decreto</h6></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="fw-bold small">N° Decreto Alcaldicio</label>
+                        <input type="text" name="numero_decreto_autoriza" class="form-control" value="{{ contrato.numero_decreto_autoriza or '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="fw-bold small">Fecha del Decreto</label>
+                        <input type="date" name="fecha_decreto" class="form-control" value="{{ contrato.fecha_decreto }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-dark">2. Autoridades Firmantes</h6></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="fw-bold small">Ministro de Fe</label>
+                        <select name="secretario_id" class="form-select" required>
+                            {% for aut in autoridades %}
+                                {% if 'SECRETARIO' in aut.cargo.upper() %}
+                                <option value="{{ aut.id }}" {% if contrato.secretario_id == aut.id %}selected{% endif %}>{{ aut.nombre }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="fw-bold small">Alcalde</label>
+                        <select name="autoridad_id" class="form-select" required>
+                            {% for aut in autoridades %}
+                                {% if 'SECRETARIO' not in aut.cargo.upper() %}
+                                <option value="{{ aut.id }}" {% if contrato.autoridad_id == aut.id %}selected{% endif %}>{{ aut.nombre }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-dark">3. Fecha de Escrituración</h6></div>
+            <div class="card-body">
+                <label class="fw-bold small">Fecha de Firma del Contrato</label>
+                <input type="date" name="fecha_firma" class="form-control w-50" value="{{ contrato.fecha_firma }}" required>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4 border-left-success">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-success">4. Datos del Prestador</h6></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-5">
+                        <label class="small fw-bold">RUT (Solo lectura)</label>
+                        <input type="text" class="form-control bg-light" value="{{ contrato.persona.rut }}" readonly>
+                        <input type="hidden" name="persona_id" value="{{ contrato.persona_id }}">
+                    </div>
+                    <div class="col-md-7">
+                        <label class="small fw-bold">Nombre Completo</label>
+                        <input type="text" class="form-control bg-light fw-bold" value="{{ contrato.persona.nombres }} {{ contrato.persona.apellido_paterno }}" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-dark">5. Programa Presupuestario</h6></div>
+            <div class="card-body">
+                <select name="programa_id" id="select_programa" class="form-select" required onchange="cargarCuentasPrograma(false)">
+                    <option value="">Seleccione Programa...</option>
+                    {% for prog in programas %}
+                        {% set saldo = prog.cuentas | sum(attribute='saldo_actual') %}
+                        {% if contrato.programa_id == prog.id %}
+                             {% set saldo = saldo + contrato.monto_total %} 
+                        {% endif %}
+                        <option value="{{ prog.id }}" {% if contrato.programa_id == prog.id %}selected{% endif %}>
+                            {{ prog.nombre }} (Disp: ${{ "{:,.0f}".format(saldo).replace(',', '.') }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-dark">6. Vigencia del Contrato</h6></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="small fw-bold">Fecha Inicio</label>
+                        <input type="date" name="fecha_inicio" id="fecha_inicio" class="form-control" value="{{ contrato.fecha_inicio }}" required onchange="validarFechas()">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="small fw-bold">Fecha Término</label>
+                        <input type="date" name="fecha_fin" id="fecha_fin" class="form-control" value="{{ contrato.fecha_fin }}" required onchange="validarFechas()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-dark">7. Funciones</h6>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="agregarFuncion()">Agregar</button>
+            </div>
+            <div class="card-body">
+                <div id="contenedor-funciones">
+                    {% if contrato.funciones_json %}
+                        {% for funcion in contrato.funciones_json %}
+                        <div class="input-group mb-2">
+                            <span class="input-group-text bg-light">{{ loop.index }}</span>
+                            <input type="text" name="funciones[]" class="form-control" value="{{ funcion }}" required>
+                            <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">X</button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="input-group mb-2"><span class="input-group-text bg-light">1</span><input type="text" name="funciones[]" class="form-control" required></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4 border-left-warning">
+            <div class="card-header py-3 bg-warning bg-opacity-10">
+                <h6 class="m-0 fw-bold text-dark"><i class="bi bi-cash-coin"></i> 8. Gestión Financiera Detallada</h6>
+            </div>
+            <div class="card-body">
+                
+                <div class="row mb-4 align-items-end bg-light p-3 rounded mx-1">
+                    <div class="col-md-4">
+                        <label class="small fw-bold">Monto Total ($)</label>
+                        <input type="text" id="input_monto_total" class="form-control fw-bold" 
+                               value="{{ "{:,.0f}".format(contrato.monto_total).replace(',', '.') }}" 
+                               onkeyup="formatearInputMoneda(this)">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small fw-bold">N° Cuotas</label>
+                        <input type="number" id="input_num_cuotas" class="form-control text-center" 
+                               value="{{ contrato.cuotas|length }}" min="1">
+                    </div>
+                    <div class="col-md-5">
+                        <button type="button" class="btn btn-warning w-100 fw-bold text-dark shadow-sm" onclick="inicializarMatrizPagos()">
+                            <i class="bi bi-arrow-repeat"></i> Regenerar Estructura (Reset)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row" id="area_trabajo_financiero" style="display:none;"> <div class="col-lg-5 border-end">
+                        <h6 class="fw-bold small text-secondary mb-3">Paso 1: Seleccione una Cuota</h6>
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-sm table-hover border">
+                                <thead class="table-light sticky-top">
+                                    <tr><th>#</th><th>Mes/Año</th><th>Monto</th><th></th></tr>
+                                </thead>
+                                <tbody id="tbody_cuotas_maestro"></tbody>
+                                <tfoot class="table-light fw-bold">
+                                    <tr><td colspan="2" class="text-end">Total:</td><td colspan="2"><span id="span_total_cuotas">$0</span></td></tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div id="alerta_cuadratura_global" class="alert alert-danger small mt-2 py-1" style="display:none;">Error Cuadratura.</div>
+                    </div>
+
+                    <div class="col-lg-7 ps-4">
+                        <div id="panel_detalle_cuota" style="opacity: 0.5; pointer-events: none;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold text-primary m-0">Editando: <span id="lbl_cuota_activa">Ninguna</span></h6>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copiarDistribucionATodas()">Replicar a todas</button>
+                            </div>
+                            <div class="input-group mb-3">
+                                <span class="input-group-text bg-primary text-white small">Monto Cuota $</span>
+                                <input type="text" id="input_monto_cuota_activa" class="form-control fw-bold text-primary" onkeyup="formatearInputMoneda(this); actualizarMontoCuotaActiva()">
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <select id="sel_mes_cuota" class="form-select form-select-sm" onchange="actualizarFechaCuota()">
+                                        <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <input type="number" id="inp_anio_cuota" class="form-control form-control-sm" onchange="actualizarFechaCuota()">
+                                </div>
+                            </div>
+                            <h6 class="small fw-bold border-bottom pb-1 mt-4">Imputación Presupuestaria</h6>
+                            <table class="table table-sm table-bordered mt-2">
+                                <thead class="bg-light"><tr><th class="small">Cuenta</th><th class="small">Monto</th></tr></thead>
+                                <tbody id="tbody_distribucion_detalle"></tbody>
+                                <tfoot><tr><td class="text-end small fw-bold">Asignado:</td><td class="fw-bold"><span id="span_total_imputado">$0</span></td></tr></tfoot>
+                            </table>
+                            <div id="msg_error_imputacion" class="text-danger small fw-bold mt-1" style="display:none;">Descuadrado.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4"><div class="card-body"><div class="row"><div class="col-md-4"><label class="fw-bold small text-primary">Horas Semanales</label><input type="number" name="horas_semanales" id="input-horas" class="form-control fw-bold" value="{{ contrato.horas_semanales }}" min="1" max="44" onchange="verificarTipo(); calcularHoras()" onkeyup="calcularHoras()"></div><div class="col-md-8"><label class="fw-bold small text-primary">Tipo de Contrato</label><select name="tipo_contrato_id" id="select-tipo-contrato" class="form-select" required onchange="verificarTipo()">{% for t in tipos_contrato %}<option value="{{ t.id }}" data-jornada="{{ 'true' if t.es_jornada_completa else 'false' }}" {% if contrato.tipo_contrato_id == t.id %}selected{% endif %}>{{ t.nombre }}</option>{% endfor %}</select></div></div></div></div>
+        
+        <div class="card shadow mb-4" id="card-horario">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-primary">10. Distribución Horaria</h6>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-primary bg-white me-2" onclick="cargarHorarioEstandar()"><i class="bi bi-clock"></i> Horario Estándar</button>
+                    <span id="badge-total-horas" class="badge bg-primary fs-6">0 Hrs</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info border-0 shadow-sm mb-3 py-2 small"><i class="bi bi-info-circle-fill"></i> <strong>Tolerancia:</strong> 10 min. | <strong>Colación:</strong> >30 min descuenta.</div>
+                <table class="table table-sm table-bordered">
+                    <thead><tr><th>Día</th><th>Entrada</th><th>Salida</th><th>Colación</th><th>Total</th></tr></thead>
+                    <tbody>
+                        {% set h_data = contrato.horario_json or {} %}
+                        {% for dia in ['lunes','martes','miercoles','jueves','viernes'] %}
+                        {% set dia_data = h_data.get(dia, {'entrada': '', 'salida': '', 'colacion': 30}) %}
+                        <tr class="fila-horario" id="fila-{{dia}}">
+                            <td class="text-capitalize">{{dia}}</td>
+                            <td><input type="time" name="horario[{{dia}}][entrada]" class="form-control form-control-sm inp-entrada" value="{{ dia_data.entrada }}" onchange="calcularHoras()"></td>
+                            <td><input type="time" name="horario[{{dia}}][salida]" class="form-control form-control-sm inp-salida" value="{{ dia_data.salida }}" onchange="calcularHoras()"></td>
+                            <td><input type="number" name="horario[{{dia}}][colacion]" class="form-control form-control-sm inp-colacion" value="{{ dia_data.colacion }}" onchange="calcularHoras()"></td>
+                            <td class="total-dia text-center fw-bold">0</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div id="alerta-horas" class="alert small mt-2" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mb-5">
+            <button type="submit" class="btn btn-success btn-lg shadow">Guardar Cambios</button>
+            <a href="{{ url_for('contratos_bp.listar') }}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // --- ESTADO GLOBAL ---
+    let CUOTAS = [];
+    let CUENTAS_DISPONIBLES = [];
+    let CUOTA_ACTIVA_IDX = -1;
+
+    // --- DATOS DEL SERVIDOR (PRECARGA) ---
+    // Construimos manualmente el JSON de las cuotas existentes para el JS
+    const DATOS_PRECARGADOS = [
+        {% for cuota in contrato.cuotas %}
+        {
+            idx: {{ loop.index0 }},
+            mes: {{ cuota.mes }},
+            anio: {{ cuota.anio }},
+            monto: {{ cuota.monto }},
+            distribucion: [
+                {% for det in cuota.detalles_financieros %}
+                { codigo: "{{ det.codigo_cuenta }}", monto: {{ det.monto_parcial }} },
+                {% endfor %}
+            ]
+        },
+        {% endfor %}
+    ];
+
+    // AL CARGAR LA PÁGINA:
+    document.addEventListener("DOMContentLoaded", function() {
+        // 1. Cargar cuentas del programa
+        cargarCuentasPrograma(true); 
+        // 2. Calcular horas iniciales
+        calcularHoras();
+        // 3. Verificar estado de jornada
+        verificarTipo();
+    });
+
+    // 1. CARGA DE CUENTAS + INICIALIZACIÓN
+    function cargarCuentasPrograma(esInicio = false) {
+        const id = document.getElementById('select_programa').value;
+        if(!id) return;
+        
+        fetch(`/contratos/api/cuentas_programa/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.cuentas && data.cuentas.length > 0) {
+                    CUENTAS_DISPONIBLES = data.cuentas;
+                    
+                    if (esInicio && DATOS_PRECARGADOS.length > 0) {
+                        // SI ES EDICIÓN: Mezclar datos guardados con nombres de cuentas actuales
+                        CUOTAS = DATOS_PRECARGADOS.map(c => {
+                            // Mapeamos para agregar el 'nombre' que no viene en la BD de cuotas
+                            c.distribucion.forEach(d => {
+                                const ctaInfo = CUENTAS_DISPONIBLES.find(x => x.codigo === d.codigo);
+                                d.nombre = ctaInfo ? ctaInfo.nombre : 'Cuenta Desconocida';
+                            });
+                            return c;
+                        });
+                        // Mostramos la matriz precargada
+                        document.getElementById('area_trabajo_financiero').style.display = 'flex';
+                        renderizarTablaMaestra();
+                        seleccionarCuota(0);
+                    } else if (!esInicio) {
+                        // Si cambiamos el programa manualmente, reseteamos si ya había datos
+                        if(CUOTAS.length > 0) inicializarMatrizPagos();
+                    }
+                } else {
+                    alert("El programa seleccionado no tiene cuentas.");
+                }
+            });
+    }
+
+    // (EL RESTO DE LAS FUNCIONES JS SON IDÉNTICAS A CREATE.HTML, COPIADAS AQUÍ PARA COMPLETITUD)
+    
+    function inicializarMatrizPagos() {
+        const total = obtenerValorNumerico('input_monto_total');
+        const nCuotas = parseInt(document.getElementById('input_num_cuotas').value) || 1;
+        if (total <= 0) return;
+
+        document.getElementById('area_trabajo_financiero').style.display = 'flex';
+        CUOTAS = [];
+        let base = Math.floor(total / nCuotas);
+        let resto = total % nCuotas;
+        let fecha = new Date();
+        let mes = fecha.getMonth() + 1;
+        let anio = fecha.getFullYear();
+
+        for(let i=0; i<nCuotas; i++) {
+            let monto = (i === nCuotas - 1) ? base + resto : base;
+            let m = mes + i; let a = anio;
+            while(m > 12) { m -= 12; a++; }
+
+            let dist = CUENTAS_DISPONIBLES.map((cta, idx) => ({
+                codigo: cta.codigo, nombre: cta.nombre, monto: (idx === 0) ? monto : 0 
+            }));
+            CUOTAS.push({ idx: i, mes: m, anio: a, monto: monto, distribucion: dist });
+        }
+        renderizarTablaMaestra(); seleccionarCuota(0);
+    }
+
+    function renderizarTablaMaestra() {
+        const tbody = document.getElementById('tbody_cuotas_maestro');
+        tbody.innerHTML = '';
+        let sumaTotal = 0;
+        CUOTAS.forEach((c, index) => {
+            sumaTotal += c.monto;
+            const activo = (index === CUOTA_ACTIVA_IDX) ? 'table-active border-start border-primary border-4' : '';
+            tbody.innerHTML += `<tr class="${activo}" style="cursor:pointer;" onclick="seleccionarCuota(${index})"><td class="fw-bold">${index + 1}</td><td>${obtenerNombreMes(c.mes)} ${c.anio}</td><td>$${numeroAString(c.monto)}</td><td><i class="bi bi-pencil-square text-muted"></i></td></tr>`;
+        });
+        document.getElementById('span_total_cuotas').innerText = "$" + numeroAString(sumaTotal);
+        const totalEsperado = obtenerValorNumerico('input_monto_total');
+        document.getElementById('alerta_cuadratura_global').style.display = (sumaTotal !== totalEsperado) ? 'block' : 'none';
+    }
+
+    function seleccionarCuota(index) {
+        CUOTA_ACTIVA_IDX = index;
+        const cuota = CUOTAS[index];
+        renderizarTablaMaestra();
+        const panel = document.getElementById('panel_detalle_cuota');
+        panel.style.opacity = "1"; panel.style.pointerEvents = "auto";
+        document.getElementById('lbl_cuota_activa').innerText = `Cuota #${index + 1}`;
+        document.getElementById('input_monto_cuota_activa').value = numeroAString(cuota.monto);
+        document.getElementById('sel_mes_cuota').value = cuota.mes;
+        document.getElementById('inp_anio_cuota').value = cuota.anio;
+        renderizarDistribucionDetalle();
+    }
+
+    function renderizarDistribucionDetalle() {
+        const cuota = CUOTAS[CUOTA_ACTIVA_IDX];
+        const tbody = document.getElementById('tbody_distribucion_detalle');
+        tbody.innerHTML = '';
+        let sumaDist = 0;
+        cuota.distribucion.forEach((d, idx) => {
+            sumaDist += d.monto;
+            tbody.innerHTML += `<tr><td class="small"><div class="fw-bold">${d.codigo}</div><div class="text-muted" style="font-size:0.75rem">${d.nombre}</div></td><td><input type="text" class="form-control form-control-sm" value="${numeroAString(d.monto)}" onkeyup="formatearInputMoneda(this); actualizarMontoDistribucion(${idx}, this)"></td></tr>`;
+        });
+        document.getElementById('span_total_imputado').innerText = "$" + numeroAString(sumaDist);
+        document.getElementById('msg_error_imputacion').style.display = (sumaDist !== cuota.monto) ? 'block' : 'none';
+    }
+
+    // ACTUALIZADORES
+    function actualizarMontoCuotaActiva() {
+        CUOTAS[CUOTA_ACTIVA_IDX].monto = obtenerValorNumerico('input_monto_cuota_activa');
+        renderizarTablaMaestra(); renderizarDistribucionDetalle();
+    }
+    function actualizarFechaCuota() {
+        CUOTAS[CUOTA_ACTIVA_IDX].mes = parseInt(document.getElementById('sel_mes_cuota').value);
+        CUOTAS[CUOTA_ACTIVA_IDX].anio = parseInt(document.getElementById('inp_anio_cuota').value);
+        renderizarTablaMaestra();
+    }
+    function actualizarMontoDistribucion(idx, input) {
+        CUOTAS[CUOTA_ACTIVA_IDX].distribucion[idx].monto = parseInt(input.value.replace(/\./g, '')) || 0;
+        renderizarDistribucionDetalle();
+    }
+    function copiarDistribucionATodas() {
+        if(!confirm("¿Replicar a todas?")) return;
+        const modelo = CUOTAS[CUOTA_ACTIVA_IDX].distribucion;
+        const montoModelo = CUOTAS[CUOTA_ACTIVA_IDX].monto;
+        CUOTAS.forEach((c, i) => {
+            if (i !== CUOTA_ACTIVA_IDX) {
+                c.distribucion = modelo.map(item => ({ codigo: item.codigo, nombre: item.nombre, monto: Math.round((item.monto * c.monto) / montoModelo) }));
+                let diff = c.monto - c.distribucion.reduce((a, b) => a + b.monto, 0);
+                if(diff !== 0 && c.distribucion.length > 0) c.distribucion[c.distribucion.length - 1].monto += diff;
+            }
+        });
+        alert("Replicado.");
+    }
+
+    // ENVÍO
+    function enviarFormularioAvanzado() {
+        let totalInput = obtenerValorNumerico('input_monto_total');
+        let sumaCuotas = CUOTAS.reduce((a, b) => a + b.monto, 0);
+        if (totalInput !== sumaCuotas) { alert("Error: Totales no cuadran."); return; }
+        for (let c of CUOTAS) {
+            let sumaDist = c.distribucion.reduce((a, b) => a + b.monto, 0);
+            if (sumaDist !== c.monto) { alert(`Error en Cuota #${c.idx + 1}: Distribución cuadrada incorrecta.`); seleccionarCuota(c.idx); return; }
+        }
+        document.getElementById('input_json_completo').value = JSON.stringify(CUOTAS);
+        document.getElementById('formContrato').submit();
+    }
+
+    // UTILIDADES
+    function formatearInputMoneda(i) { i.value = i.value.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+    function obtenerValorNumerico(id) { return parseInt(document.getElementById(id).value.replace(/\./g, '')) || 0; }
+    function numeroAString(n) { return n.toLocaleString('es-CL'); }
+    function obtenerNombreMes(m) { const n=["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]; return n[m]||""; }
+    
+    // HORARIO
+    function calcularHoras() {
+        let total = 0;
+        document.querySelectorAll('.fila-horario').forEach(f => {
+            const inT = f.querySelector('.inp-entrada').value;
+            const outT = f.querySelector('.inp-salida').value;
+            const col = parseInt(f.querySelector('.inp-colacion').value)||0;
+            if(inT && outT) {
+                let d1 = new Date(`2000-01-01T${inT}:00`);
+                let d2 = new Date(`2000-01-01T${outT}:00`);
+                let diff = Math.floor((d2-d1)/60000);
+                let desc = (col > 30) ? (col - 30) : 0;
+                total += Math.max(0, diff - desc);
+            }
+        });
+        let hrs = (total/60);
+        document.getElementById('badge-total-horas').innerText = hrs.toFixed(1) + " Hrs";
+        
+        const decl = parseFloat(document.getElementById('input-horas').value) || 0;
+        const alerta = document.getElementById('alerta-horas');
+        if (hrs > decl) { alerta.style.display='block'; alerta.className='alert alert-danger small mt-2'; alerta.innerHTML=`Excede contrato (${decl} hrs).`; }
+        else if (hrs < decl && decl > 0) { alerta.style.display='block'; alerta.className='alert alert-warning small mt-2'; alerta.innerHTML=`Falta para ${decl} hrs.`; }
+        else { alerta.style.display='none'; }
+    }
+
+    function cargarHorarioEstandar() {
+        ['lunes','martes','miercoles','jueves','viernes'].forEach(d => {
+            const f = document.getElementById('fila-'+d);
+            f.querySelector('.inp-entrada').value="08:00";
+            f.querySelector('.inp-colacion').value=30;
+            f.querySelector('.inp-salida').value=(d==='viernes')?"16:00":"17:00";
+        });
+        calcularHoras();
+    }
+
+    function verificarTipo() {
+        const sel = document.getElementById('select-tipo-contrato');
+        const esComp = sel.options[sel.selectedIndex].getAttribute('data-jornada') === 'true';
+        const inpH = document.getElementById('input-horas');
+        if(esComp) inpH.value=44; 
+        inpH.removeAttribute('readonly'); 
+        document.getElementById('card-horario').style.display='block';
+        calcularHoras();
+    }
+
+    function validarFechas() {
+        const i = document.getElementById('fecha_inicio').value;
+        const f = document.getElementById('fecha_fin').value;
+        if(i && f && new Date(f) < new Date(i)) { alert("Fecha término inválida"); document.getElementById('fecha_fin').value=""; }
+    }
+
+    function agregarFuncion() { document.getElementById('contenedor-funciones').insertAdjacentHTML('beforeend', `<div class="input-group mb-2"><span class="input-group-text">*</span><input type="text" name="funciones[]" class="form-control"><button class="btn btn-danger" onclick="this.parentElement.remove()">X</button></div>`); }
+
+</script>
+{% endblock %}

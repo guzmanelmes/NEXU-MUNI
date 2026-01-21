@@ -1,44 +1,111 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3">
     <div>
-        <h2 class="mb-0"><i class="bi bi-gear-fill"></i> Configuración del Sistema</h2>
-        <p class="text-muted">Gestión de catálogos y diccionarios de datos</p>
+        <h2 class="mb-0"><i class="bi bi-gear-fill text-primary"></i> Configuración del Sistema</h2>
+        <p class="text-muted">Gestión de catálogos y diccionarios de datos municipales</p>
     </div>
 </div>
 
 <ul class="nav nav-tabs" id="myTab" role="tablist">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#estamentos">Estamentos</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#niveles">Niveles de Estudio</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#sexos">Sexo / Género</button></li>
+    <li class="nav-item">
+        <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#unidades">
+            <i class="bi bi-diagram-3"></i> Estructura Organizacional
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#estamentos">
+            <i class="bi bi-person-badge"></i> Estamentos
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#niveles">
+            <i class="bi bi-mortarboard"></i> Niveles de Estudio
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#sexos">
+            <i class="bi bi-gender-ambiguous"></i> Sexo / Género
+        </button>
+    </li>
 </ul>
 
-<div class="tab-content p-4 border border-top-0 bg-white shadow-sm">
+<div class="tab-content p-4 border border-top-0 bg-white shadow-sm rounded-bottom">
     
-    <div class="tab-pane fade show active" id="estamentos">
+    <div class="tab-pane fade show active" id="unidades">
         <div class="d-flex justify-content-between mb-3">
-            <h5>Listado de Estamentos</h5>
+            <h5 class="fw-bold"><i class="bi bi-building"></i> Direcciones y Unidades</h5>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaUnidad">
+                <i class="bi bi-plus-lg"></i> Nueva Unidad
+            </button>
+        </div>
+        <table class="table table-hover table-sm align-middle border">
+            <thead class="table-dark">
+                <tr>
+                    <th>Tipo</th>
+                    <th>Nombre / Sigla</th>
+                    <th>Dependencia</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in unidades %}
+                <tr>
+                    <td><span class="badge bg-info text-dark">{{ u.tipo }}</span></td>
+                    <td>
+                        <div class="fw-bold text-dark">{{ u.nombre }}</div>
+                        <small class="text-muted text-uppercase">{{ u.sigla or '--' }}</small>
+                    </td>
+                    <td>
+                        {% if u.padre %}
+                            <i class="bi bi-arrow-return-right text-muted small"></i> {{ u.padre.nombre }}
+                        {% else %}
+                            <span class="text-muted small fst-italic">Nivel Superior</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditarUnidad"
+                                onclick="cargarUnidad('{{ u.id }}', '{{ u.nombre }}', '{{ u.sigla or '' }}', '{{ u.tipo }}', '{{ u.padre_id or '' }}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form action="{{ url_for('catalogos_bp.eliminar', tipo='unidad', id=u.id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Borrar unidad?');">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="tab-pane fade" id="estamentos">
+        <div class="d-flex justify-content-between mb-3">
+            <h5 class="fw-bold"><i class="bi bi-person-badge"></i> Listado de Estamentos</h5>
             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalEstamento">
                 <i class="bi bi-plus-lg"></i> Nuevo
             </button>
         </div>
-        <table class="table table-striped table-sm align-middle">
-            <thead><tr><th>ID</th><th>Estamento</th><th>Grados</th><th class="text-end">Acciones</th></tr></thead>
+        <table class="table table-hover table-sm align-middle border">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 80px;">ID</th>
+                    <th>Nombre Estamento</th>
+                    <th>Rango de Grados</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
             <tbody>
                 {% for e in estamentos %}
                 <tr>
-                    <td>{{ e.id }}</td>
-                    <td>{{ e.estamento }}</td>
-                    <td>{{ e.grado_min }} al {{ e.grado_max }}</td>
+                    <td class="text-muted">#{{ e.id }}</td>
+                    <td class="fw-bold text-dark">{{ e.estamento }}</td>
+                    <td><span class="badge bg-light text-primary border">Grados {{ e.grado_min }} al {{ e.grado_max }}</span></td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary me-1" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#modalEditarEstamento"
+                        <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#modalEditarEstamento"
                                 onclick="cargarEstamento('{{ e.id }}', '{{ e.estamento }}', '{{ e.grado_min }}', '{{ e.grado_max }}')">
                             <i class="bi bi-pencil"></i>
                         </button>
-
                         <form action="{{ url_for('catalogos_bp.eliminar', tipo='estamento', id=e.id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Borrar?');">
                             <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                         </form>
@@ -51,22 +118,26 @@
 
     <div class="tab-pane fade" id="niveles">
         <div class="d-flex justify-content-between mb-3">
-            <h5>Niveles de Estudio</h5>
+            <h5 class="fw-bold"><i class="bi bi-mortarboard"></i> Niveles de Estudio</h5>
             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalNivel">
                 <i class="bi bi-plus-lg"></i> Nuevo
             </button>
         </div>
-        <table class="table table-striped table-sm align-middle">
-            <thead><tr><th>ID</th><th>Descripción</th><th class="text-end">Acciones</th></tr></thead>
+        <table class="table table-hover table-sm align-middle border">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 80px;">ID</th>
+                    <th>Descripción del Nivel</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
             <tbody>
                 {% for n in niveles %}
                 <tr>
-                    <td>{{ n.id }}</td>
-                    <td>{{ n.descripcion }}</td>
+                    <td class="text-muted">#{{ n.id }}</td>
+                    <td class="fw-bold text-dark">{{ n.descripcion }}</td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary me-1" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#modalEditarNivel"
+                        <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#modalEditarNivel"
                                 onclick="cargarNivel('{{ n.id }}', '{{ n.descripcion }}')">
                             <i class="bi bi-pencil"></i>
                         </button>
@@ -82,22 +153,26 @@
 
     <div class="tab-pane fade" id="sexos">
         <div class="d-flex justify-content-between mb-3">
-            <h5>Opciones de Sexo</h5>
+            <h5 class="fw-bold"><i class="bi bi-gender-ambiguous"></i> Opciones de Sexo</h5>
             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalSexo">
                 <i class="bi bi-plus-lg"></i> Nuevo
             </button>
         </div>
-        <table class="table table-striped table-sm w-75 align-middle">
-            <thead><tr><th>ID</th><th>Descripción</th><th class="text-end">Acciones</th></tr></thead>
+        <table class="table table-hover table-sm align-middle border w-75">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 80px;">ID</th>
+                    <th>Descripción</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
             <tbody>
                 {% for s in sexos %}
                 <tr>
-                    <td>{{ s.id }}</td>
-                    <td>{{ s.descripcion }}</td>
+                    <td class="text-muted">#{{ s.id }}</td>
+                    <td class="fw-bold text-dark">{{ s.descripcion }}</td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary me-1" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#modalEditarSexo"
+                        <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#modalEditarSexo"
                                 onclick="cargarSexo('{{ s.id }}', '{{ s.descripcion }}')">
                             <i class="bi bi-pencil"></i>
                         </button>
@@ -112,79 +187,58 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalSexo" tabindex="-1">
+<div class="modal fade" id="modalNuevaUnidad" tabindex="-1">
     <div class="modal-dialog">
-        <form action="{{ url_for('catalogos_bp.crear_sexo') }}" method="POST" class="modal-content">
-            <div class="modal-header"><h5 class="modal-title">Nuevo Sexo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <form action="{{ url_for('catalogos_bp.crear_unidad') }}" method="POST" class="modal-content">
+            <div class="modal-header bg-primary text-white"><h5 class="modal-title">Nueva Unidad Municipal</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <div class="mb-2"><label>Descripción</label><input type="text" name="descripcion" class="form-control" required></div>
-            </div>
-            <div class="modal-footer"><button type="submit" class="btn btn-primary">Guardar</button></div>
-        </form>
-    </div>
-</div>
-
-<div class="modal fade" id="modalNivel" tabindex="-1">
-    <div class="modal-dialog">
-        <form action="{{ url_for('catalogos_bp.crear_nivel') }}" method="POST" class="modal-content">
-            <div class="modal-header"><h5 class="modal-title">Nuevo Nivel</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body">
-                <div class="mb-2"><label>Descripción</label><input type="text" name="descripcion" class="form-control" required></div>
-            </div>
-            <div class="modal-footer"><button type="submit" class="btn btn-primary">Guardar</button></div>
-        </form>
-    </div>
-</div>
-
-<div class="modal fade" id="modalEstamento" tabindex="-1">
-    <div class="modal-dialog">
-        <form action="{{ url_for('catalogos_bp.crear_estamento') }}" method="POST" class="modal-content">
-            <div class="modal-header"><h5 class="modal-title">Nuevo Estamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body">
-                <div class="mb-2"><label>Estamento</label><input type="text" name="estamento" class="form-control" required></div>
+                <div class="mb-3"><label class="fw-bold small">Nombre de la Unidad</label><input type="text" name="nombre" class="form-control" required></div>
                 <div class="row">
-                    <div class="col"><label>G. Min</label><input type="number" name="grado_min" class="form-control"></div>
-                    <div class="col"><label>G. Max</label><input type="number" name="grado_max" class="form-control"></div>
+                    <div class="col-6 mb-3"><label class="fw-bold small">Sigla</label><input type="text" name="sigla" class="form-control"></div>
+                    <div class="col-6 mb-3"><label class="fw-bold small">Tipo</label>
+                        <select name="tipo" class="form-select" required>
+                            <option value="DIRECCION">DIRECCIÓN</option><option value="DEPARTAMENTO">DEPARTAMENTO</option><option value="UNIDAD">UNIDAD</option><option value="OFICINA">OFICINA</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3"><label class="fw-bold small">Depende de (Padre)</label>
+                    <select name="padre_id" class="form-select">
+                        <option value="">-- Nivel Superior --</option>
+                        {% for u in unidades %}<option value="{{ u.id }}">{{ u.nombre }}</option>{% endfor %}
+                    </select>
                 </div>
             </div>
-            <div class="modal-footer"><button type="submit" class="btn btn-primary">Guardar</button></div>
+            <div class="modal-footer"><button type="submit" class="btn btn-primary px-4">Guardar</button></div>
         </form>
     </div>
 </div>
 
-<div class="modal fade" id="modalEditarSexo" tabindex="-1">
+<div class="modal fade" id="modalEditarUnidad" tabindex="-1">
     <div class="modal-dialog">
-        <form action="{{ url_for('catalogos_bp.editar_sexo') }}" method="POST" class="modal-content border-warning">
-            <div class="modal-header bg-warning-subtle">
-                <h5 class="modal-title text-dark">Editar Sexo</h5>
+        <form action="{{ url_for('catalogos_bp.editar_unidad') }}" id="formEditarUnidad" method="POST" class="modal-content border-warning">
+            <div class="modal-header bg-warning-subtle text-dark">
+                <h5 class="modal-title fw-bold">Editar Unidad Organizacional</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-2">
-                    <label>ID</label>
-                    <input type="text" name="id" id="edit_sexo_id" class="form-control bg-light" readonly>
+                <input type="hidden" name="id" id="edit_uni_id">
+                <div class="mb-3"><label class="fw-bold small">Nombre</label><input type="text" name="nombre" id="edit_uni_nom" class="form-control" required></div>
+                <div class="row">
+                    <div class="col-6 mb-3"><label class="fw-bold small">Sigla</label><input type="text" name="sigla" id="edit_uni_sig" class="form-control"></div>
+                    <div class="col-6 mb-3"><label class="fw-bold small">Tipo</label>
+                        <select name="tipo" id="edit_uni_tipo" class="form-select" required>
+                            <option value="DIRECCION">DIRECCIÓN</option><option value="DEPARTAMENTO">DEPARTAMENTO</option><option value="UNIDAD">UNIDAD</option><option value="OFICINA">OFICINA</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="mb-2">
-                    <label>Descripción</label>
-                    <input type="text" name="descripcion" id="edit_sexo_desc" class="form-control" required>
+                <div class="mb-3"><label class="fw-bold small">Dependencia</label>
+                    <select name="padre_id" id="edit_uni_padre" class="form-select">
+                        <option value="">-- Nivel Superior --</option>
+                        {% for u in unidades %}<option value="{{ u.id }}">{{ u.nombre }}</option>{% endfor %}
+                    </select>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="submit" class="btn btn-warning">Actualizar</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="modal fade" id="modalEditarNivel" tabindex="-1">
-    <div class="modal-dialog">
-        <form action="{{ url_for('catalogos_bp.editar_nivel') }}" method="POST" class="modal-content border-warning">
-            <div class="modal-header bg-warning-subtle"><h5 class="modal-title">Editar Nivel</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body">
-                <div class="mb-2"><label>ID</label><input type="text" name="id" id="edit_nivel_id" class="form-control bg-light" readonly></div>
-                <div class="mb-2"><label>Descripción</label><input type="text" name="descripcion" id="edit_nivel_desc" class="form-control" required></div>
-            </div>
-            <div class="modal-footer"><button type="submit" class="btn btn-warning">Actualizar</button></div>
+            <div class="modal-footer"><button type="submit" class="btn btn-warning px-4">Actualizar</button></div>
         </form>
     </div>
 </div>
@@ -192,31 +246,72 @@
 <div class="modal fade" id="modalEditarEstamento" tabindex="-1">
     <div class="modal-dialog">
         <form action="{{ url_for('catalogos_bp.editar_estamento') }}" method="POST" class="modal-content border-warning">
-            <div class="modal-header bg-warning-subtle"><h5 class="modal-title">Editar Estamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header bg-warning-subtle text-dark">
+                <h5 class="modal-title fw-bold">Editar Estamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
-                <div class="mb-2"><label>ID</label><input type="text" name="id" id="edit_est_id" class="form-control bg-light" readonly></div>
-                <div class="mb-2"><label>Estamento</label><input type="text" name="estamento" id="edit_est_nom" class="form-control" required></div>
+                <input type="hidden" name="id" id="edit_est_id">
+                <div class="mb-3"><label class="fw-bold small">Nombre Estamento</label><input type="text" name="estamento" id="edit_est_nom" class="form-control" required></div>
                 <div class="row">
-                    <div class="col"><label>Min</label><input type="number" name="grado_min" id="edit_est_min" class="form-control"></div>
-                    <div class="col"><label>Max</label><input type="number" name="grado_max" id="edit_est_max" class="form-control"></div>
+                    <div class="col-6 mb-3"><label class="fw-bold small">Grado Mínimo</label><input type="number" name="grado_min" id="edit_est_min" class="form-control" required></div>
+                    <div class="col-6 mb-3"><label class="fw-bold small">Grado Máximo</label><input type="number" name="grado_max" id="edit_est_max" class="form-control" required></div>
                 </div>
             </div>
-            <div class="modal-footer"><button type="submit" class="btn btn-warning">Actualizar</button></div>
+            <div class="modal-footer"><button type="submit" class="btn btn-warning px-4">Actualizar</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditarNivel" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="{{ url_for('catalogos_bp.editar_nivel') }}" method="POST" class="modal-content border-warning">
+            <div class="modal-header bg-warning-subtle text-dark">
+                <h5 class="modal-title fw-bold">Editar Nivel de Estudios</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="id" id="edit_nivel_id">
+                <div class="mb-3"><label class="fw-bold small">Descripción</label><input type="text" name="descripcion" id="edit_nivel_desc" class="form-control" required></div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-warning px-4">Actualizar</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditarSexo" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="{{ url_for('catalogos_bp.editar_sexo') }}" method="POST" class="modal-content border-warning">
+            <div class="modal-header bg-warning-subtle text-dark">
+                <h5 class="modal-title fw-bold">Editar Sexo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="id" id="edit_sexo_id">
+                <div class="mb-3"><label class="fw-bold small">Descripción</label><input type="text" name="descripcion" id="edit_sexo_desc" class="form-control" required></div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-warning px-4">Actualizar</button></div>
         </form>
     </div>
 </div>
 
 <script>
+    function cargarUnidad(id, nombre, sigla, tipo, padre_id) {
+        document.getElementById('edit_uni_id').value = id;
+        document.getElementById('edit_uni_nom').value = nombre;
+        document.getElementById('edit_uni_sig').value = sigla;
+        document.getElementById('edit_uni_tipo').value = tipo;
+        document.getElementById('edit_uni_padre').value = padre_id;
+    }
+
     function cargarSexo(id, desc) {
         document.getElementById('edit_sexo_id').value = id;
         document.getElementById('edit_sexo_desc').value = desc;
     }
-
     function cargarNivel(id, desc) {
         document.getElementById('edit_nivel_id').value = id;
         document.getElementById('edit_nivel_desc').value = desc;
     }
-
     function cargarEstamento(id, nombre, min, max) {
         document.getElementById('edit_est_id').value = id;
         document.getElementById('edit_est_nom').value = nombre;
@@ -224,5 +319,4 @@
         document.getElementById('edit_est_max').value = max;
     }
 </script>
-
 {% endblock %}

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="bi bi-pencil-square text-primary"></i> Editar Nombramiento
+        </h1>
+        <a href="{{ url_for('nombramientos_bp.listar') }}" class="btn btn-secondary shadow-sm">
+            <i class="bi bi-arrow-left"></i> Volver al listado
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 fw-bold text-primary">
+                        Modificar datos de: {{ n.persona.nombres }} {{ n.persona.apellido_paterno }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('nombramientos_bp.editar', id=n.id) }}" method="POST">
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-uppercase">RUT</label>
+                                <input type="text" class="form-control bg-light" value="{{ n.persona.rut }}" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-uppercase">Estado Actual</label>
+                                <input type="text" class="form-control bg-light fw-bold {% if n.estado == 'VIGENTE' %}text-success{% else %}text-danger{% endif %}" 
+                                       value="{{ n.estado }}" readonly>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="row g-3">
+                            <div class="col-md-12 mb-2">
+                                <label class="form-label fw-bold text-primary">
+                                    <i class="bi bi-diagram-3"></i> Ubicación Administrativa
+                                </label>
+                                <select name="unidad_id" class="form-select border-primary" required>
+                                    <option value="">Seleccione...</option>
+                                    {% for u in unidades %}
+                                    <option value="{{ u.id }}" {% if n.unidad_id == u.id %}selected{% endif %}>
+                                        {{ u.tipo }}: {{ u.nombre }} 
+                                        {% if u.padre %} (Depende de: {{ u.padre.nombre }}) {% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Indique la Dirección o Departamento donde se desempeña.</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Calidad Jurídica</label>
+                                <select name="calidad_juridica" class="form-select" required>
+                                    <option value="PLANTA" {% if n.calidad_juridica == 'PLANTA' %}selected{% endif %}>PLANTA</option>
+                                    <option value="CONTRATA" {% if n.calidad_juridica == 'CONTRATA' %}selected{% endif %}>CONTRATA</option>
+                                    <option value="SUPLENCIA" {% if n.calidad_juridica == 'SUPLENCIA' %}selected{% endif %}>SUPLENCIA</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Estamento / Cargo</label>
+                                <select name="estamento_id" class="form-select" required>
+                                    {% for e in estamentos %}
+                                    <option value="{{ e.id }}" {% if n.estamento_id == e.id %}selected{% endif %}>
+                                        {{ e.estamento }} (Rango: {{ e.grado_min }}-{{ e.grado_max }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Grado</label>
+                                <input type="number" name="grado" class="form-control" value="{{ n.grado }}" required>
+                                <div class="form-text">Debe coincidir con el rango del estamento.</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Jornada (Hrs)</label>
+                                <input type="number" name="horas_semanales" class="form-control" value="{{ n.horas_semanales }}" required>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-primary">Número de Decreto</label>
+                                <input type="text" name="numero_decreto" class="form-control" value="{{ n.numero_decreto }}" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-primary">Fecha Decreto</label>
+                                <input type="date" name="fecha_decreto" class="form-control" value="{{ n.fecha_decreto.strftime('%Y-%m-%d') }}" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Fecha Inicio Funciones</label>
+                                <input type="date" name="fecha_inicio" class="form-control" value="{{ n.fecha_inicio.strftime('%Y-%m-%d') }}" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Fecha Término</label>
+                                <input type="date" name="fecha_fin" class="form-control" 
+                                       value="{{ n.fecha_fin.strftime('%Y-%m-%d') if n.fecha_fin else '' }}">
+                                <div class="form-text text-danger">Modificar solo si cambia la vigencia del contrato.</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-top text-end">
+                            <button type="submit" class="btn btn-primary px-4 shadow">
+                                <i class="bi bi-save"></i> Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

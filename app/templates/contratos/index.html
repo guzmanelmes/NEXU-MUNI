@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+        <h1 class="h3 text-gray-800"><i class="bi bi-briefcase"></i> Gestión de Contratos</h1>
+        <a href="{{ url_for('contratos_bp.nuevo_contrato') }}" class="btn btn-primary shadow-sm">
+            <i class="bi bi-plus-lg"></i> Nuevo Contrato
+        </a>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Folio</th>
+                            <th>Funcionario</th>
+                            <th>Tipo / Programa</th>
+                            <th>Fechas</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in contratos %}
+                        <tr>
+                            <td class="fw-bold text-secondary">#{{ c.id }}</td>
+                            <td>
+                                <div class="fw-bold">{{ c.persona.nombres }} {{ c.persona.apellido_paterno }}</div>
+                                <small class="text-muted">{{ c.persona.rut }}</small>
+                            </td>
+                            <td>
+                                <div class="small text-primary fw-bold">{{ c.tipo.nombre }}</div>
+                                <small class="text-muted">{{ c.programa.nombre|truncate(30) }}</small>
+                            </td>
+                            <td>
+                                <small class="d-block">In: {{ c.fecha_inicio.strftime('%d/%m/%Y') }}</small>
+                                <small class="d-block">Fi: {{ c.fecha_fin.strftime('%d/%m/%Y') }}</small>
+                            </td>
+                            <td>
+                                {% if c.estado == 'BORRADOR' %}
+                                    <span class="badge bg-secondary">Borrador</span>
+                                {% elif c.estado == 'PENDIENTE_FIRMA' %}
+                                    <span class="badge bg-warning text-dark">Pendiente Firma</span>
+                                {% elif c.estado == 'VIGENTE' %}
+                                    <span class="badge bg-success">Vigente</span>
+                                {% elif c.estado == 'ANULADO' %}
+                                    <span class="badge bg-danger">Anulado</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group">
+                                    
+                                    {% if c.estado in ['BORRADOR', 'PENDIENTE_FIRMA'] %}
+                                    <a href="{{ url_for('contratos_bp.editar_contrato', id=c.id) }}" class="btn btn-sm btn-outline-secondary" title="Editar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    {% endif %}
+
+                                    {% if c.estado != 'ANULADO' %}
+                                    <a href="{{ url_for('contratos_bp.descargar_word', id=c.id) }}" class="btn btn-sm btn-outline-primary" title="Descargar Word">
+                                        <i class="bi bi-file-word"></i>
+                                    </a>
+                                    {% endif %}
+
+                                    {% if c.estado in ['BORRADOR', 'PENDIENTE_FIRMA'] %}
+                                    <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalSubir{{ c.id }}" title="Subir Firmado">
+                                        <i class="bi bi-upload"></i>
+                                    </button>
+                                    {% endif %}
+
+                                    {% if c.estado == 'VIGENTE' and c.archivo_firmado %}
+                                    <a href="{{ url_for('contratos_bp.ver_pdf', filename=c.archivo_firmado) }}" target="_blank" class="btn btn-sm btn-outline-success" title="Ver PDF">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% endif %}
+
+                                    {% if c.estado != 'ANULADO' %}
+                                    <form action="{{ url_for('contratos_bp.anular_contrato', id=c.id) }}" method="POST" onsubmit="return confirm('¿Está seguro de anular este contrato? Esta acción liberará el presupuesto pero no se puede deshacer.');" style="display:inline;">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Anular Contrato">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+
+                                </div>
+
+                                <div class="modal fade" id="modalSubir{{ c.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <form action="{{ url_for('contratos_bp.subir_contrato_firmado', id=c.id) }}" method="POST" enctype="multipart/form-data">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Subir Contrato Firmado (Folio {{ c.id }})</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body text-start">
+                                                    <p class="small text-muted">Seleccione el archivo PDF escaneado con las firmas. Esto cambiará el estado a <strong>VIGENTE</strong>.</p>
+                                                    <input type="file" name="archivo_pdf" class="form-control" accept=".pdf" required>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="submit" class="btn btn-success">Subir y Activar</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="bi bi-wallet2 text-primary"></i> Gestión Presupuestaria
+        </h1>
+        <a href="{{ url_for('programas_bp.nuevo_programa') }}" class="btn btn-primary shadow-sm fw-bold">
+            <i class="bi bi-plus-lg"></i> Nuevo Programa
+        </a>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 bg-white border-bottom-primary">
+            <h6 class="m-0 fw-bold text-primary">Programas y Decretos Registrados</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="dataTableProgramas" width="100%" cellspacing="0">
+                    <thead class="table-light text-dark text-center">
+                        <tr>
+                            <th>Decreto</th>
+                            <th>Nombre del Programa</th>
+                            <th>Cuentas</th>
+                            <th>Presupuesto Inicial</th>
+                            <th>Saldo Disponible</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in programas %}
+                            {# --- CÁLCULOS VISUALES EN JINJA --- #}
+                            {% set total_inicial = p.cuentas | sum(attribute='monto_inicial') %}
+                            {% set total_saldo = p.cuentas | sum(attribute='saldo_actual') %}
+                            
+                            {# Evitamos división por cero #}
+                            {% if total_inicial > 0 %}
+                                {% set porcentaje = (total_saldo / total_inicial) * 100 %}
+                            {% else %}
+                                {% set porcentaje = 0 %}
+                            {% endif %}
+
+                        <tr>
+                            <td class="align-middle text-center font-monospace">
+                                <strong>#{{ p.numero_decreto }}</strong><br>
+                                <small class="text-muted">{{ p.fecha_decreto.strftime('%d/%m/%Y') }}</small>
+                            </td>
+                            <td class="align-middle">
+                                <a href="{{ url_for('programas_bp.ver_programa', id=p.id) }}" class="fw-bold text-primary text-decoration-none" title="Ver Cartola y Movimientos">
+                                    {{ p.nombre }}
+                                </a>
+                                {% if p.archivo_adjunto %}
+                                    <i class="bi bi-paperclip text-muted ms-1"></i>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle text-center">
+                                <span class="badge bg-light text-dark border">{{ p.cuentas|length }} cuentas</span>
+                            </td>
+                            <td class="align-middle text-end text-muted small">
+                                ${{ "{:,.0f}".format(total_inicial).replace(',', '.') }}
+                            </td>
+                            <td class="align-middle">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="fw-bold {{ 'text-danger' if porcentaje < 30 else 'text-success' }}">
+                                        ${{ "{:,.0f}".format(total_saldo).replace(',', '.') }}
+                                    </span>
+                                    <small class="text-xs text-muted">{{ "{:,.0f}".format(porcentaje) }}%</small>
+                                </div>
+                                <div class="progress progress-sm">
+                                    <div class="progress-bar bg-{{ 'danger' if porcentaje < 30 else 'success' }}" 
+                                         role="progressbar" 
+                                         style="width: {{ porcentaje }}%">
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="align-middle text-center">
+                                <div class="btn-group">
+                                    <a href="{{ url_for('programas_bp.ver_programa', id=p.id) }}" class="btn btn-sm btn-outline-info" title="Ver Cartola">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('programas_bp.editar_programa', id=p.id) }}" class="btn btn-sm btn-outline-warning text-dark" title="Editar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <form action="{{ url_for('programas_bp.eliminar_programa', id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro de eliminar este programa? Esta acción no se puede deshacer.');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                                No hay programas presupuestarios registrados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

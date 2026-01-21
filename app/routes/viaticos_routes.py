@@ -1,39 +1,59 @@
-# app/routes/viaticos_routes.py
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app.services.viaticos_service import ViaticosService
 
-# Definimos el Blueprint
 viaticos_bp = Blueprint('viaticos_bp', __name__, url_prefix='/viaticos')
 
-@viaticos_bp.route('/configuracion', methods=['GET', 'POST'])
+# 1. RUTA PRINCIPAL (Listado solo, si existiera un index separado)
+@viaticos_bp.route('/', methods=['GET'])
+def listar_escala():
+    try:
+        escalas = ViaticosService.get_todas_escalas()
+        # Si usas el mismo HTML para todo, redirige a configurar o usa el mismo template
+        return render_template('viaticos/create.html', escalas=escalas)
+    except Exception as e:
+        flash(f'Error al cargar escalas: {str(e)}', 'danger')
+        return render_template('viaticos/create.html', escalas=[])
+
+# 2. RUTA DE CONFIGURACIÓN (Aquí estaba el problema)
+@viaticos_bp.route('/configurar', methods=['GET', 'POST'])
 def configurar_escala():
-    """Vista para administrar los valores de los viáticos por grado"""
-    
+    """
+    Maneja tanto el GUARDADO (POST) como la VISTA DEL FORMULARIO + TABLA (GET).
+    """
     if request.method == 'POST':
         try:
-            # Enviamos todo el formulario al servicio
-            ViaticosService.crear_escala(request.form.to_dict())
-            flash('Tramo de viático registrado correctamente.', 'success')
+            ViaticosService.crear_escala(request.form)
+            flash('Nueva escala registrada. Las vigencias se han ajustado automáticamente.', 'success')
+            # Redirigimos a la misma ruta para ver los cambios
             return redirect(url_for('viaticos_bp.configurar_escala'))
             
         except ValueError as e:
-            flash(f'Error de validación: {str(e)}', 'warning')
+            flash(f'Atención: {str(e)}', 'warning')
         except Exception as e:
-            flash(f'Error al guardar: {str(e)}', 'danger')
+            flash(f'Error crítico al guardar: {str(e)}', 'danger')
+            
+        return redirect(url_for('viaticos_bp.configurar_escala'))
 
-    # GET: Listar escalas existentes
-    escalas = ViaticosService.get_todas_escalas()
-    
-    return render_template('viaticos/escala.html', escalas=escalas)
+    # --- PARTE CORREGIDA (GET) ---
+    # Antes solo hacías return render_template(...), por eso la tabla salía vacía.
+    # Ahora cargamos las escalas también aquí:
+    try:
+        escalas = ViaticosService.get_todas_escalas()
+    except:
+        escalas = []
+        
+    return render_template('viaticos/create.html', escalas=escalas)
 
-@viaticos_bp.route('/configuracion/eliminar/<int:id>', methods=['POST'])
+# 3. RUTA DE ELIMINACIÓN
+@viaticos_bp.route('/eliminar/<int:id>', methods=['POST'])
 def eliminar_escala(id):
     try:
         if ViaticosService.eliminar_escala(id):
-            flash('Tramo eliminado correctamente.', 'info')
+            flash('Registro eliminado y vigencias restauradas correctamente.', 'success')
         else:
-            flash('No se encontró el registro.', 'warning')
+            flash('No se encontró el registro a eliminar.', 'warning')
     except Exception as e:
-        flash(f'Error crítico: {str(e)}', 'danger')
+        flash(f'Error al eliminar: {str(e)}', 'danger')
         
+    # Redirigimos a configurar para volver a ver la tabla actualizada
     return redirect(url_for('viaticos_bp.configurar_escala'))

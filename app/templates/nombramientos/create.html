@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">Registrar Nombramiento (Planta / Contrata)</h1>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form action="{{ url_for('nombramientos_bp.nuevo') }}" method="POST">
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <label class="fw-bold">Funcionario</label>
+                        <div class="input-group">
+                            <input type="text" id="rut_busqueda" class="form-control" placeholder="Ingrese RUT (ej: 12.345.678-9)" oninput="formatearRut(this)" onblur="buscarPersona()">
+                            <button type="button" class="btn btn-primary" onclick="buscarPersona()"><i class="bi bi-search"></i></button>
+                        </div>
+                        <input type="text" id="nombre_persona" class="form-control mt-2 bg-light" readonly placeholder="Nombre del funcionario aparecerá aquí...">
+                        <input type="hidden" name="persona_id" id="persona_id_real" required>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <label class="fw-bold text-primary"><i class="bi bi-diagram-3"></i> Ubicación Administrativa (Dirección / Departamento / Oficina)</label>
+                        <select name="unidad_id" id="select_unidad" class="form-select" required>
+                            <option value="">Seleccione la unidad de destino...</option>
+                            {% for u in unidades %}
+                                <option value="{{ u.id }}">
+                                    {{ u.tipo }}: {{ u.nombre }} 
+                                    {% if u.padre %} (Depende de: {{ u.padre.nombre }}) {% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Indique la repartición municipal donde el funcionario prestará servicios.</small>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="fw-bold text-primary">Calidad Jurídica</label>
+                        <select name="calidad_juridica" id="select_calidad" class="form-select" required onchange="ajustarFormulario()">
+                            <option value="">Seleccione...</option>
+                            <option value="PLANTA">PLANTA (Indefinido)</option>
+                            <option value="CONTRATA">A CONTRATA (Plazo Fijo)</option>
+                            <option value="SUPLENCIA">SUPLENCIA (Reemplazo)</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="fw-bold">Estamento</label>
+                        <select name="estamento_id" id="select_estamento" class="form-select" required onchange="actualizarRangoGrados()">
+                            <option value="" data-min="1" data-max="30">Seleccione...</option>
+                            {% for e in estamentos %}
+                            <option value="{{ e.id }}" data-min="{{ e.grado_min }}" data-max="{{ e.grado_max }}">
+                                {{ e.estamento }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="fw-bold">Grado</label>
+                        <input type="number" name="grado" id="input_grado" class="form-control" required>
+                        <small class="text-muted fw-bold" id="help_grado">Seleccione estamento primero</small>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="fw-bold">N° Decreto Nombramiento</label>
+                        <input type="text" name="numero_decreto" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="fw-bold">Fecha Decreto</label>
+                        <input type="date" name="fecha_decreto" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="row mb-4 p-3 bg-light border rounded">
+                    <div class="col-md-4">
+                        <label class="fw-bold">Fecha Inicio</label>
+                        <input type="date" name="fecha_inicio" class="form-control" required>
+                    </div>
+                    
+                    <div class="col-md-4" id="div_fecha_fin">
+                        <label class="fw-bold text-danger">Fecha Término</label>
+                        <input type="date" name="fecha_fin" id="input_fecha_fin" class="form-control">
+                        <small class="text-muted">Obligatorio para Contrata/Suplencia</small>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="fw-bold">Horas Semanales</label>
+                        <input type="number" name="horas_semanales" id="input_horas" class="form-control" value="44" min="11" max="44" required>
+                        <small class="text-muted" id="help_horas">Solo editable para Contrata</small>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success btn-lg shadow"><i class="bi bi-save"></i> Registrar Nombramiento</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. FORMATEO AUTOMÁTICO DE RUT
+    function formatearRut(input) {
+        let valor = input.value.replace(/[^0-9kK]/g, '');
+        if (valor.length <= 1) {
+            input.value = valor;
+            return;
+        }
+        let cuerpo = valor.slice(0, -1);
+        let dv = valor.slice(-1).toUpperCase();
+        let cuerpoFormateado = cuerpo.toString().split('').reverse().join('')
+            .replace(/(?=\d)\d{3}(?=\d)/g, '$&.')
+            .split('').reverse().join('');
+        input.value = cuerpoFormateado + '-' + dv;
+    }
+
+    // 2. VALIDACIÓN DINÁMICA DE GRADOS
+    function actualizarRangoGrados() {
+        const select = document.getElementById('select_estamento');
+        const inputGrado = document.getElementById('input_grado');
+        const helpText = document.getElementById('help_grado');
+        const opcion = select.options[select.selectedIndex];
+        const min = opcion.getAttribute('data-min');
+        const max = opcion.getAttribute('data-max');
+
+        if (min && max) {
+            inputGrado.min = min;
+            inputGrado.max = max;
+            helpText.textContent = `Rango permitido: ${min} al ${max}`;
+            helpText.className = "text-primary fw-bold small";
+            if (inputGrado.value && (parseInt(inputGrado.value) < min || parseInt(inputGrado.value) > max)) {
+                inputGrado.value = "";
+                alert(`El grado no es válido para este estamento (${min} a ${max}).`);
+            }
+        } else {
+            helpText.textContent = "Seleccione un estamento";
+        }
+    }
+
+    // 3. LÓGICA DE CAMPOS POR CALIDAD JURÍDICA
+    function ajustarFormulario() {
+        const calidad = document.getElementById('select_calidad').value;
+        const divFechaFin = document.getElementById('div_fecha_fin');
+        const inputFechaFin = document.getElementById('input_fecha_fin');
+        const inputHoras = document.getElementById('input_horas');
+
+        if (calidad === 'PLANTA') {
+            divFechaFin.style.visibility = 'hidden'; 
+            inputFechaFin.value = '';
+            inputFechaFin.required = false;
+            inputHoras.value = 44;
+            inputHoras.setAttribute('readonly', true);
+        } else {
+            divFechaFin.style.visibility = 'visible';
+            inputFechaFin.required = true;
+            inputHoras.removeAttribute('readonly'); 
+        }
+    }
+
+    // 4. BÚSQUEDA DE PERSONA API
+    function buscarPersona() {
+        let rut = document.getElementById('rut_busqueda').value;
+        if(rut.length < 3) return;
+        
+        fetch('/contratos/api/buscar_persona/' + rut) 
+            .then(res => res.json())
+            .then(data => {
+                if(data.encontrado) {
+                    document.getElementById('nombre_persona').value = data.nombre_completo;
+                    document.getElementById('persona_id_real').value = rut;
+                    document.getElementById('rut_busqueda').classList.add('is-valid');
+                } else {
+                    alert('Persona no encontrada en el sistema.');
+                    document.getElementById('nombre_persona').value = '';
+                    document.getElementById('persona_id_real').value = '';
+                }
+            })
+            .catch(err => console.error('Error:', err));
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        ajustarFormulario();
+    });
+</script>
+{% endblock %}

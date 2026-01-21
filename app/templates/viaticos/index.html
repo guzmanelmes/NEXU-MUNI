@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="bi bi-geo-alt text-danger"></i> Escalas de Viáticos
+        </h1>
+        <a href="{{ url_for('viaticos_bp.configurar_escala') }}" class="btn btn-danger shadow-sm">
+            <i class="bi bi-plus-lg"></i> Nueva Escala
+        </a>
+    </div>
+
+    <div class="card shadow mb-4 border-top border-danger border-3">
+        <div class="card-header py-3 bg-white">
+            <h6 class="m-0 fw-bold text-danger">Historial de Valores Registrados</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-light text-center">
+                        <tr>
+                            <th>Vigencia Desde</th>
+                            <th>Rango Grados</th>
+                            <th>Viático 100%</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for esc in escalas %}
+                        <tr>
+                            <td class="text-center">
+                                <i class="bi bi-calendar-event text-muted me-1"></i>
+                                {{ esc.fecha_inicio.strftime('%d/%m/%Y') }}
+                            </td>
+                            
+                            <td class="text-center fw-bold">
+                                <span class="badge bg-light text-dark border">
+                                    Grados {{ esc.grado_min }} al {{ esc.grado_max }}
+                                </span>
+                            </td>
+
+                            <td class="text-end text-success fw-bold">
+                                ${{ "{:,.0f}".format(esc.monto_100).replace(',', '.') }}
+                            </td>
+
+                            <td class="text-center">
+                                {% if esc.fecha_fin %}
+                                    <span class="badge bg-secondary" title="Hasta {{ esc.fecha_fin.strftime('%d/%m/%Y') }}">Histórico</span>
+                                {% else %}
+                                    <span class="badge bg-success">Vigente Actual</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+                                <form action="{{ url_for('viaticos_bp.eliminar_escala', id=esc.id) }}" method="POST" onsubmit="return confirm('¿Está seguro de eliminar esta escala de viáticos?');" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Eliminar registro">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-5">
+                                <div class="mb-2"><i class="bi bi-folder-x fs-1"></i></div>
+                                <span class="fw-bold">No hay escalas de viáticos configuradas.</span><br>
+                                <small>Haga clic en "Nueva Escala" para ingresar los valores y tramos.</small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

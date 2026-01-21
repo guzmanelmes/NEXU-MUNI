@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="bi bi-person-badge text-primary"></i> Personal de Planta y Contrata
+        </h1>
+        <a href="{{ url_for('nombramientos_bp.nuevo') }}" class="btn btn-success shadow-sm">
+            <i class="bi bi-plus-lg"></i> Nuevo Nombramiento
+        </a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body py-2">
+                    <span class="small fw-bold text-muted me-3 text-uppercase">Filtrar por:</span>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary active">Todos</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary">Planta</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary">Contrata</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary">Nómina de Personal Vigente</h6>
+            <span class="badge bg-light text-dark border">Total: {{ nombramientos|length }}</span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Funcionario</th>
+                            <th>Ubicación Administrativa</th> 
+                            <th>Calidad Jurídica</th>
+                            <th>Cargo / Grado</th>
+                            <th>Jornada</th>
+                            <th>Vigencia</th>
+                            <th>Decreto</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for n in nombramientos %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark">{{ n.persona.nombres }} {{ n.persona.apellido_paterno }}</div>
+                                <small class="text-muted">{{ n.persona.rut }}</small>
+                            </td>
+
+                            <td>
+                                {% if n.unidad %}
+                                    <div class="small fw-bold text-primary text-uppercase">
+                                        {{ n.unidad.nombre }}
+                                    </div>
+                                    {% if n.unidad.padre %}
+                                        <small class="text-muted d-block" style="font-size: 0.75rem;">
+                                            <i class="bi bi-diagram-2"></i> {{ n.unidad.padre.nombre }}
+                                        </small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted small fst-italic">No asignada</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if n.calidad_juridica == 'PLANTA' %}
+                                    <span class="badge bg-primary">PLANTA</span>
+                                {% elif n.calidad_juridica == 'CONTRATA' %}
+                                    <span class="badge bg-warning text-dark">CONTRATA</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">SUPLENCIA</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <div class="small fw-bold">{{ n.estamento.estamento }}</div>
+                                <small class="text-primary fw-bold">Grado {{ n.grado }}</small>
+                            </td>
+
+                            <td>
+                                <span class="badge bg-light text-dark border">{{ n.horas_semanales }} Hrs.</span>
+                            </td>
+
+                            <td>
+                                <div class="small">
+                                    <i class="bi bi-calendar-check text-success"></i> {{ n.fecha_inicio.strftime('%d/%m/%Y') }}
+                                </div>
+                                <div class="small">
+                                    <i class="bi bi-calendar-x text-danger"></i> 
+                                    {% if n.fecha_fin %}
+                                        {{ n.fecha_fin.strftime('%d/%m/%Y') }}
+                                    {% else %}
+                                        <span class="text-muted fst-italic">Indefinido</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <td>
+                                <small class="d-block fw-bold">N° {{ n.numero_decreto or 'S/N' }}</small>
+                                <small class="text-muted">{{ n.fecha_decreto.strftime('%d/%m/%Y') if n.fecha_decreto else 'S/D' }}</small>
+                            </td>
+
+                            <td class="text-center">
+                                {% if n.estado == 'VIGENTE' %}
+                                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Activo</span>
+                                {% else %}
+                                    <span class="badge bg-danger text-uppercase">{{ n.estado }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+                                <div class="btn-group shadow-sm">
+                                    <a href="{{ url_for('nombramientos_bp.ver_detalle', id=n.id) }}" class="btn btn-sm btn-outline-primary" title="Ver Ficha Completa">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+
+                                    <a href="{{ url_for('nombramientos_bp.editar', id=n.id) }}" class="btn btn-sm btn-outline-secondary" title="Editar Nombramiento">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    
+                                    {% if n.estado == 'VIGENTE' %}
+                                    <button class="btn btn-sm btn-outline-warning" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#modalBaja{{ n.id }}" 
+                                            title="Finalizar Administrativamente">
+                                        <i class="bi bi-calendar-x"></i>
+                                    </button>
+                                    {% endif %}
+
+                                    <form action="{{ url_for('nombramientos_bp.eliminar', id=n.id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro de ELIMINAR permanentemente este registro? Esta acción no se puede deshacer.');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Borrar Registro del Sistema">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <div class="modal fade" id="modalBaja{{ n.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <form action="{{ url_for('nombramientos_bp.finalizar', id=n.id) }}" method="POST"> 
+                                            <div class="modal-content text-start">
+                                                <div class="modal-header bg-warning text-dark">
+                                                    <h5 class="modal-title fw-bold">Finalizar Nombramiento</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body text-dark">
+                                                    <p>Está registrando el término del nombramiento de <strong>{{ n.persona.nombres }} {{ n.persona.apellido_paterno }}</strong>.</p>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Motivo de término (Nuevo Estado)</label>
+                                                        <select name="estado" class="form-select" required>
+                                                            <option value="FINALIZADO">Término de Contrato / Plazo</option>
+                                                            <option value="RENUNCIA">Renuncia Voluntaria</option>
+                                                            <option value="DESTITUCION">Destitución / Sumario</option>
+                                                            <option value="JUBILACION">Jubilación</option>
+                                                            <option value="FALLECIMIENTO">Fallecimiento</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Fecha de Término Efectiva</label>
+                                                        <input type="date" name="fecha_fin" class="form-control" value="{{ n.fecha_fin.strftime('%Y-%m-%d') if n.fecha_fin else '' }}" required>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                    <button type="submit" class="btn btn-warning">Confirmar Término</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
