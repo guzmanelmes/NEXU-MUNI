@@ -11,12 +11,15 @@ def create_app(config_class=DevelopmentConfig):
     ma.init_app(app)
 
     # 2. Registro de Modelos
-    # Es vital importar los modelos aquí para que SQLAlchemy los detecte al crear tablas
-    from app.models import catalogos, personas
-    from app.models import remuneraciones
-    from app.models import viaticos
-    from app.models import programas, contratos
-    from app.models import nombramientos  # <--- NUEVO MODELO AGREGADO
+    # Es vital importar los modelos aquí para que SQLAlchemy los detecte antes de cualquier operación
+    with app.app_context():
+        from app.models import catalogos, personas
+        from app.models import remuneraciones
+        from app.models import viaticos
+        from app.models import programas, contratos
+        from app.models import nombramientos
+        # NUEVO: Modelo de Horas Extras
+        from app.models import horas_extras 
 
     # 3. Registro de Blueprints (Rutas del Sistema)
 
@@ -46,6 +49,10 @@ def create_app(config_class=DevelopmentConfig):
     from app.routes.viaticos_routes import viaticos_bp
     app.register_blueprint(viaticos_bp)
 
+    # --- HORAS EXTRAS (NUEVO MÓDULO) ---
+    from app.routes.horas_extras_routes import he_bp
+    app.register_blueprint(he_bp)
+
     # --- PRESUPUESTO (Billetera) ---
     from app.routes.programas_routes import programas_bp
     app.register_blueprint(programas_bp)
@@ -58,8 +65,11 @@ def create_app(config_class=DevelopmentConfig):
     from app.routes.config_contratos_routes import config_contratos_bp
     app.register_blueprint(config_contratos_bp)
 
+    # --- FIRMANTES (Alcalde / Secretario) --- 
+    from app.routes.autoridades_routes import autoridades_bp
+    app.register_blueprint(autoridades_bp)
+
     # --- NOMBRAMIENTOS (Planta y Contrata) --- 
-    # <--- NUEVA RUTA AGREGADA
     from app.routes.nombramientos_routes import nombramientos_bp
     app.register_blueprint(nombramientos_bp)
 

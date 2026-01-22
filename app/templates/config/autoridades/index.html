@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="bi bi-person-check text-primary"></i> Configuración de Firmantes
+        </h1>
+        <a href="{{ url_for('autoridades_bp.nueva') }}" class="btn btn-primary shadow-sm">
+            <i class="bi bi-plus-lg"></i> Registrar Nuevo Firmante
+        </a>
+    </div>
+
+    <div class="alert alert-info border-0 shadow-sm small mb-4">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        <strong>Nota:</strong> Los nombres mostrados aquí se obtienen directamente del catálogo maestro de 
+        <a href="{{ url_for('web_bp.listar_personas') }}" class="alert-link">Personas</a> mediante el RUT.
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 140px;">RUT</th>
+                            <th>Nombre del Funcionario</th>
+                            <th>Cargo Municipal</th>
+                            <th>Líneas de Firma (Docx)</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in autoridades %}
+                        <tr>
+                            <td class="fw-bold text-primary">{{ a.rut }}</td> 
+                            
+                            <td>
+                                <div class="fw-bold">
+                                    {{ a.persona.nombres }} {{ a.persona.apellido_paterno }} {{ a.persona.apellido_materno }}
+                                </div>
+                                <div class="small text-muted">Identificado en sistema</div>
+                            </td>
+
+                            <td>
+                                <div class="fw-bold text-dark">{{ a.cargo }}</div>
+                                {% if a.decreto_nombramiento %}
+                                    <div class="small text-muted italic">{{ a.decreto_nombramiento }}</div>
+                                {% endif %}
+                            </td>
+
+                            <td class="small">
+                                <div class="text-truncate" style="max-width: 220px;" title="{{ a.firma_linea_1 }}">
+                                    <i class="bi bi-file-earmark-word text-primary"></i> {{ a.firma_linea_1 }}
+                                </div>
+                                <div class="text-muted small italic">{{ a.firma_linea_4 or '' }}</div>
+                            </td>
+
+                            <td>
+                                {% if a.es_subrogante %}
+                                    <span class="badge bg-warning text-dark border shadow-sm">
+                                        <i class="bi bi-arrow-repeat"></i> Subrogante
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-info border shadow-sm">
+                                        <i class="bi bi-award"></i> Titular
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+                                <div class="btn-group shadow-sm">
+                                    <a href="#" class="btn btn-sm btn-outline-primary" title="Editar Configuración">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger" title="Eliminar Firmante">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <i class="bi bi-person-exclamation h4 d-block"></i>
+                                No hay firmantes configurados. Registra uno nuevo vinculado a una persona.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

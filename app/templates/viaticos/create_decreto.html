@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <h1 class="h3 mb-0 text-gray-800"><i class="bi bi-file-earmark-plus text-danger"></i> Generar Decreto de Viático</h1>
+        <a href="{{ url_for('viaticos_bp.listar_decretos') }}" class="btn btn-secondary shadow-sm">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    <form action="{{ url_for('viaticos_bp.nuevo_decreto') }}" method="POST" id="formViatico">
+        
+        <div class="card shadow mb-4 border-left-danger">
+            <div class="card-header py-3">
+                <h6 class="m-0 fw-bold text-danger">1. Datos del Funcionario</h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="small fw-bold">Buscar por RUT</label>
+                        <div class="input-group">
+                            <input type="text" name="rut_funcionario" id="rut_buscar" class="form-control fw-bold" placeholder="12.345.678-9" required onkeyup="formatearRut(this)">
+                            <button class="btn btn-danger" type="button" onclick="buscarFuncionario()">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="small fw-bold">Nombre Completo</label>
+                        <input type="text" id="nombre_mostrar" class="form-control bg-light" readonly placeholder="---">
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="small fw-bold">Grado (EUS)</label>
+                        <input type="number" name="grado" id="input_grado" class="form-control bg-light" placeholder="Ej: 8" required min="1" max="20" readonly>
+                        <div class="form-text small text-muted"><i class="bi bi-lock-fill"></i> Dato obtenido del contrato vigente.</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="small fw-bold">Estamento</label>
+                        <input type="hidden" name="estamento" id="hidden_estamento">
+                        <select id="select_estamento_visual" class="form-select bg-light" disabled>
+                            <option value="">---</option>
+                            <option value="ALCALDE">Alcalde</option>
+                            <option value="DIRECTIVO">Directivo</option>
+                            <option value="PROFESIONAL">Profesional</option>
+                            <option value="JEFATURA">Jefatura</option>
+                            <option value="TECNICO">Técnico</option>
+                            <option value="ADMINISTRATIVO">Administrativo</option>
+                            <option value="AUXILIAR">Auxiliar</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="small fw-bold">Calidad Jurídica</label>
+                        <input type="hidden" name="calidad_juridica" id="hidden_calidad">
+                        <select id="select_calidad_visual" class="form-select bg-light" disabled>
+                            <option value="">---</option>
+                            <option value="PLANTA">Planta</option>
+                            <option value="CONTRATA">Contrata</option>
+                            <option value="HONORARIOS">Honorarios</option>
+                            <option value="SUPLENCIA">Suplencia</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 fw-bold text-dark">2. Detalle del Cometido Funcionario</h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label class="small fw-bold">Motivo del Viaje</label>
+                        <textarea name="motivo" class="form-control" rows="2" placeholder="Ej: Asistir a capacitación de Mercado Público..." required></textarea>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="small fw-bold">N° Decreto</label>
+                        <input type="text" name="numero_decreto" class="form-control" placeholder="Ej: 1450">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small fw-bold">Fecha Decreto</label>
+                        <input type="date" name="fecha_decreto" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="small fw-bold">Lugar de Destino</label>
+                        <input type="text" name="destino" class="form-control" placeholder="Ej: Santiago, Región Metropolitana" required>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="small fw-bold text-primary">Fecha Inicio</label>
+                        <input type="date" name="fecha_salida" id="fecha_inicio_viaje" class="form-control" required onchange="generarTablaViaticos()">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small fw-bold text-primary">Hora Inicio</label>
+                        <input type="time" name="hora_salida" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small fw-bold text-danger">Fecha Término</label>
+                        <input type="date" name="fecha_regreso" id="fecha_termino_viaje" class="form-control" onchange="generarTablaViaticos()">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small fw-bold text-danger">Hora Término</label>
+                        <input type="time" name="hora_regreso" class="form-control">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 fw-bold text-dark">3. Medio de Transporte</h6>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-md-4">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="usa_vehiculo" id="usa_vehiculo" checked onchange="toggleUsoVehiculo()">
+                            <label class="form-check-label small fw-bold" for="usa_vehiculo">
+                                Requiere movilización
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="small fw-bold">Tipo de Vehículo</label>
+                        <select name="tipo_vehiculo" id="tipo_vehiculo" class="form-select" onchange="togglePatente()">
+                            <option value="LOCOMOCION_PUBLICA">Locomoción Pública (Bus/Tren)</option>
+                            <option value="MUNICIPAL">Vehículo Municipal</option>
+                            <option value="PARTICULAR">Vehículo Particular</option>
+                            <option value="AEREO">Aéreo</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4" id="div_patente" style="display: none;">
+                        <label class="small fw-bold">Placa Patente</label>
+                        <input type="text" name="placa_patente" class="form-control text-uppercase" placeholder="AAAA-99">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4 border-left-success">
+            <div class="card-header py-3">
+                <h6 class="m-0 fw-bold text-success">4. Desglose de Viáticos por Día</h6>
+            </div>
+            <div class="card-body">
+                <input type="hidden" name="dias_100" id="total_dias_100" value="0">
+                <input type="hidden" name="dias_40" id="total_dias_40" value="0">
+                <input type="hidden" name="dias_20" id="total_dias_20" value="0">
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 20%;">Fecha</th>
+                                <th style="width: 20%;">Día Semana</th>
+                                <th>Porcentaje a Pagar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody_desglose">
+                            <tr>
+                                <td colspan="3" class="text-center text-muted small fst-italic">
+                                    Seleccione las fechas de inicio y término para generar el detalle.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="alert alert-info small py-2 mb-0 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-info-circle-fill"></i> Seleccione el porcentaje correspondiente a cada día.</span>
+                    <span class="fw-bold">Resumen: <span id="lbl_resumen">0 días al 100%, 0 al 40%, 0 al 20%</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 fw-bold text-dark">5. Autorizaciones</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="small fw-bold">Administrador Municipal (Ordena)</label>
+                        <select name="admin_id" class="form-select" required>
+                            <option value="">Seleccione...</option>
+                            {% for aut in autoridades %}
+                                <option value="{{ aut.id }}">{{ aut.persona.nombres }} {{ aut.persona.apellido_paterno }} ({{ aut.cargo }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="small fw-bold">Secretario Municipal (Ministro de Fe)</label>
+                        <select name="secretario_id" class="form-select" required>
+                            <option value="">Seleccione...</option>
+                            {% for aut in autoridades %}
+                                {% if 'SECRETARIO' in aut.cargo.upper() %}
+                                    <option value="{{ aut.id }}">{{ aut.persona.nombres }} {{ aut.persona.apellido_paterno }} ({{ aut.cargo }})</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mb-5">
+            <button type="submit" class="btn btn-success btn-lg shadow">
+                <i class="bi bi-save"></i> Guardar y Calcular Decreto
+            </button>
+            <a href="{{ url_for('viaticos_bp.listar_decretos') }}" class="btn btn-secondary">Cancelar</a>
+        </div>
+
+    </form>
+</div>
+
+<script>
+    // --- NUEVA FUNCIÓN: CONTROL MAESTRO DE VEHÍCULO ---
+    function toggleUsoVehiculo() {
+        const checkbox = document.getElementById('usa_vehiculo');
+        const selectTipo = document.getElementById('tipo_vehiculo');
+        const divPatente = document.getElementById('div_patente');
+        const inputPatente = document.getElementsByName('placa_patente')[0];
+
+        if (!checkbox.checked) {
+            // Caso: NO usa vehículo
+            // 1. Deshabilitar el selector de tipo
+            selectTipo.disabled = true;
+            // 2. Resetear el valor visual a Locomoción Pública (o una opción neutra)
+            selectTipo.value = "LOCOMOCION_PUBLICA"; 
+            
+            // 3. Ocultar y limpiar patente forzosamente
+            divPatente.style.display = 'none';
+            inputPatente.value = '';
+            inputPatente.required = false;
+        } else {
+            // Caso: SÍ usa vehículo
+            // 1. Habilitar selector
+            selectTipo.disabled = false;
+            // 2. Ejecutar validación de patente según lo que esté seleccionado actualmente
+            togglePatente();
+        }
+    }
+
+    // --- FUNCIÓN EXISTENTE: MOSTRAR/OCULTAR PATENTE SEGÚN TIPO ---
+    function togglePatente() {
+        // Doble chequeo: Si el check general está apagado, no hacer nada (se mantiene oculto por toggleUsoVehiculo)
+        if (!document.getElementById('usa_vehiculo').checked) return;
+
+        const tipo = document.getElementById('tipo_vehiculo').value;
+        const div = document.getElementById('div_patente');
+        const input = document.getElementsByName('placa_patente')[0];
+        
+        if (tipo === 'MUNICIPAL' || tipo === 'PARTICULAR') {
+            div.style.display = 'block'; 
+            input.required = true;
+        } else {
+            div.style.display = 'none'; 
+            input.required = false; 
+            input.value = '';
+        }
+    }
+
+    // --- GENERACIÓN DE TABLA DE DESGLOSE ---
+    function generarTablaViaticos() {
+        const fechaInicioVal = document.getElementById('fecha_inicio_viaje').value;
+        const fechaTerminoVal = document.getElementById('fecha_termino_viaje').value;
+        const tbody = document.getElementById('tbody_desglose');
+
+        if (!fechaInicioVal || !fechaTerminoVal) return;
+
+        const fechaInicio = new Date(fechaInicioVal + 'T00:00:00');
+        const fechaTermino = new Date(fechaTerminoVal + 'T00:00:00');
+
+        if (fechaTermino < fechaInicio) {
+            alert("La fecha de término no puede ser anterior a la de inicio.");
+            document.getElementById('fecha_termino_viaje').value = "";
+            return;
+        }
+
+        tbody.innerHTML = ''; 
+        let fechaActual = new Date(fechaInicio);
+        const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+        while (fechaActual <= fechaTermino) {
+            const diaSemanaNombre = diasSemana[fechaActual.getDay()];
+            const fechaStr = fechaActual.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            
+            let porcentajeDefecto = "100";
+            // Lógica inteligente: Si es el último día de un viaje largo, sugerir 40% (retorno)
+            if (fechaActual.getTime() === fechaTermino.getTime() && fechaActual.getTime() !== fechaInicio.getTime()) {
+                porcentajeDefecto = "40"; 
+            } else if (fechaActual.getTime() === fechaInicio.getTime() && fechaInicio.getTime() === fechaTermino.getTime()) {
+                 porcentajeDefecto = "40"; // Viaje de un solo día
+            }
+
+            const fila = `
+                <tr>
+                    <td class="fw-bold text-center">${fechaStr}</td>
+                    <td class="text-center">${diaSemanaNombre}</td>
+                    <td>
+                        <select class="form-select select-porcentaje" onchange="calcularTotalesOcultos()">
+                            <option value="100" ${porcentajeDefecto === "100" ? "selected" : ""}>100% (Completo con Pernoctación)</option>
+                            <option value="40" ${porcentajeDefecto === "40" ? "selected" : ""}>40% (Sin Pernoctar / Retorno)</option>
+                            <option value="20" ${porcentajeDefecto === "20" ? "selected" : ""}>20% (Otros gastos menores)</option>
+                            <option value="0">0% (Sin pago)</option>
+                        </select>
+                    </td>
+                </tr>
+            `;
+            tbody.insertAdjacentHTML('beforeend', fila);
+            fechaActual.setDate(fechaActual.getDate() + 1);
+        }
+        calcularTotalesOcultos();
+    }
+
+    function calcularTotalesOcultos() {
+        let total100 = 0, total40 = 0, total20 = 0;
+        document.querySelectorAll('.select-porcentaje').forEach(sel => {
+            const val = parseInt(sel.value);
+            if (val === 100) total100 += 1;
+            else if (val === 40) total40 += 1;
+            else if (val === 20) total20 += 1;
+        });
+
+        document.getElementById('total_dias_100').value = total100;
+        document.getElementById('total_dias_40').value = total40;
+        document.getElementById('total_dias_20').value = total20;
+
+        document.getElementById('lbl_resumen').innerText = 
+            `${total100} días al 100%, ${total40} al 40%, ${total20} al 20%`;
+    }
+
+    // --- BÚSQUEDA FUNCIONARIO ---
+    function buscarFuncionario() {
+        const rut = document.getElementById('rut_buscar').value;
+        if(rut.length < 8) return;
+
+        fetch(`/viaticos/api/buscar_funcionario/${encodeURIComponent(rut)}`)
+            .then(res => res.json())
+            .then(data => {
+                const inpRut = document.getElementById('rut_buscar');
+                const inpNombre = document.getElementById('nombre_mostrar');
+                
+                if(data.encontrado){
+                    inpNombre.value = data.nombre_completo;
+                    inpRut.classList.add('is-valid');
+                    inpRut.classList.remove('is-invalid');
+                    
+                    if (data.datos_contractuales) {
+                        if(data.datos_contractuales.grado) document.getElementById('input_grado').value = data.datos_contractuales.grado;
+                        if(data.datos_contractuales.estamento) {
+                            document.getElementById('select_estamento_visual').value = data.datos_contractuales.estamento; 
+                            document.getElementById('hidden_estamento').value = data.datos_contractuales.estamento;
+                        }
+                        if(data.datos_contractuales.calidad) {
+                            document.getElementById('select_calidad_visual').value = data.datos_contractuales.calidad;
+                            document.getElementById('hidden_calidad').value = data.datos_contractuales.calidad;
+                        }
+                    } else {
+                        alert("El funcionario existe pero no tiene un nombramiento vigente.");
+                        // Limpiar campos
+                        ['input_grado','select_estamento_visual','hidden_estamento','select_calidad_visual','hidden_calidad'].forEach(id => document.getElementById(id).value = "");
+                    }
+                } else {
+                    alert("Funcionario no encontrado.");
+                    inpNombre.value = "";
+                    inpRut.classList.add('is-invalid');
+                }
+            })
+            .catch(err => { console.error("Error API:", err); alert("Error de conexión."); });
+    }
+
+    function formatearRut(input) {
+        let v = input.value.replace(/[^0-9kK]/g, ""); 
+        if(v.length > 1){
+            input.value = v.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + v.slice(-1).toUpperCase();
+        } else {
+            input.value = v;
+        }
+    }
+
+    // Inicializar estado correcto al cargar la página (por si el navegador recuerda el check)
+    window.onload = function() {
+        toggleUsoVehiculo();
+    };
+</script>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <h1 class="h3 mb-0 text-gray-800"><i class="bi bi-file-earmark-arrow-up text-info"></i> Carga Masiva de Viáticos</h1>
+        <a href="{{ url_for('viaticos_bp.listar_decretos') }}" class="btn btn-secondary shadow-sm">
+            <i class="bi bi-arrow-left"></i> Volver al Listado
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-5 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-info">Instrucciones</h6>
+                </div>
+                <div class="card-body">
+                    <p>Utilice esta función para cargar múltiples decretos desde un archivo Excel/CSV.</p>
+                    <ol class="small">
+                        <li>Descargue la <strong>Plantilla CSV</strong>.</li>
+                        <li>Llene los datos respetando el formato de fechas <code>DD-MM-YYYY</code> y horas <code>HH:MM</code>.</li>
+                        <li>El sistema calculará automáticamente el Grado y Estamento según el RUT.</li>
+                        <li>El cálculo de días (100% / 40%) se hará automáticamente:
+                            <ul>
+                                <li>Ida y vuelta mismo día = 1 día al 40%.</li>
+                                <li>Pernoctación = Días intermedios al 100% y retorno al 40%.</li>
+                            </ul>
+                        </li>
+                        <li>Seleccione los firmantes que aplicarán para <strong>todo el lote</strong>.</li>
+                    </ol>
+                    <div class="d-grid mt-4">
+                        <a href="{{ url_for('viaticos_bp.descargar_plantilla_csv') }}" class="btn btn-outline-info">
+                            <i class="bi bi-download"></i> Descargar Plantilla CSV
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-dark">Subir Archivo</h6>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('viaticos_bp.carga_masiva') }}" method="POST" enctype="multipart/form-data">
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Seleccionar Archivo (.csv)</label>
+                            <input class="form-control" type="file" name="archivo_csv" accept=".csv" required>
+                        </div>
+
+                        <hr>
+                        <h6 class="fw-bold mb-3 small text-uppercase text-muted">Configuración de Firmas para el Lote</h6>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="small fw-bold">Administrador Municipal</label>
+                                <select name="admin_id" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    {% for aut in autoridades %}
+                                        <option value="{{ aut.id }}">{{ aut.persona.nombres }} {{ aut.persona.apellido_paterno }} ({{ aut.cargo }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small fw-bold">Secretario Municipal</label>
+                                <select name="secretario_id" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    {% for aut in autoridades %}
+                                        {% if 'SECRETARIO' in aut.cargo.upper() %}
+                                            <option value="{{ aut.id }}">{{ aut.persona.nombres }} {{ aut.persona.apellido_paterno }} ({{ aut.cargo }})</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-cloud-upload-fill"></i> Procesar Carga Masiva
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

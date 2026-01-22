@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-0 text-gray-800">
+                <i class="bi bi-file-earmark-plus text-primary"></i> Nueva Solicitud
+            </h3>
+            <p class="text-muted small mb-0">Generación de Orden de Servicio</p>
+        </div>
+        <a href="{{ url_for('he_bp.index') }}" class="btn btn-secondary shadow-sm">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    <form method="POST" action="{{ url_for('he_bp.create_solicitud') }}" onsubmit="enviarFormulario(event)">
+        <input type="hidden" name="detalle_json" id="detalle_json">
+
+        <div class="row g-4">
+            
+            <div class="col-12">
+                <div class="card shadow-sm border-start border-4 border-primary">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="m-0 fw-bold text-primary">1. Identificación</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-muted">RUT Funcionario</label>
+                                <div class="input-group">
+                                    <input type="text" name="rut_funcionario" id="rut_busqueda" class="form-control" 
+                                           placeholder="11.111.111-1" required oninput="formatearRut(this)" onblur="buscarFuncionario()">
+                                    <button type="button" class="btn btn-primary" onclick="buscarFuncionario()">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text text-danger d-none" id="rut_msg"></div>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold text-muted">Nombre</label>
+                                <input type="text" id="nombre_func" class="form-control bg-light" readonly tabindex="-1">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold text-muted">Calidad</label>
+                                <input type="text" id="calidad_func" class="form-control bg-light" readonly tabindex="-1">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold text-muted">Grado</label>
+                                <input type="text" id="grado_func" class="form-control bg-light" readonly tabindex="-1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card shadow-sm border-start border-4 border-warning">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="m-0 fw-bold text-warning" style="color: #fd7e14!important;">2. Datos Administrativos</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">N° Decreto (Opcional)</label>
+                                <input type="text" name="numero_decreto" class="form-control" placeholder="Pendiente...">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Fecha Decreto <span class="text-danger">*</span></label>
+                                <input type="date" name="fecha_decreto" class="form-control" required>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Firma Alcalde</label>
+                                <select name="firmante_alcalde" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    {% for f in firmantes %}
+                                    <option value="{{ f.id }}">{{ f.firma_linea_1 }} ({{ f.cargo }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Firma Secretario</label>
+                                <select name="firmante_secretario" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    {% for f in firmantes %}
+                                    <option value="{{ f.id }}">{{ f.firma_linea_1 }} ({{ f.cargo }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card shadow-sm border-start border-4 border-success mb-5">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 fw-bold text-success">3. Planificación de Jornadas</h6>
+                        <span class="badge bg-success" id="badge_total">0.0 Hrs Total</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2 align-items-end bg-light p-3 rounded border mb-3">
+                            <div class="col-md-2">
+                                <label class="small fw-bold text-muted">Fecha</label>
+                                <input type="date" id="t_fecha" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="small fw-bold text-muted">Inicio</label>
+                                <input type="time" id="t_ini" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="small fw-bold text-muted">Término</label>
+                                <input type="time" id="t_fin" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="small fw-bold text-muted">Actividad</label>
+                                <input type="text" id="t_act" class="form-control form-control-sm" placeholder="Detalle...">
+                            </div>
+                            <div class="col-md-2 pt-2 text-center">
+                                <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input" type="checkbox" id="t_vehiculo">
+                                    <label class="form-check-label small" for="t_vehiculo">Vehículo</label>
+                                </div>
+                                <input type="text" id="t_patente" class="form-control form-control-sm mt-1 d-none" placeholder="Patente">
+                            </div>
+                            <div class="col-md-1 d-grid">
+                                <button type="button" class="btn btn-success btn-sm fw-bold" onclick="agregarFila()">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm align-middle">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Horario</th>
+                                        <th class="text-center">Hrs Est.</th>
+                                        <th class="text-center">Tipo</th>
+                                        <th>Actividad</th>
+                                        <th class="text-center">Logística</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla_body">
+                                    <tr id="row_empty"><td colspan="7" class="text-center text-muted py-4">No hay jornadas agregadas.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 text-center pb-5">
+                <button type="submit" class="btn btn-primary btn-lg px-5 fw-bold shadow">
+                    <i class="bi bi-save2"></i> GUARDAR SOLICITUD
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    // JS IDÉNTICO AL ANTERIOR (Manteniendo lógica de RUT con puntos)
+    let filas = [];
+
+    function formatearRut(input) {
+        let valor = input.value.replace(/[^0-9kK]/g, '');
+        if (valor.length > 1) {
+            let cuerpo = valor.slice(0, -1);
+            let dv = valor.slice(-1).toUpperCase();
+            input.value = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + dv;
+        } else { input.value = valor; }
+    }
+
+    document.getElementById('t_vehiculo').addEventListener('change', function() {
+        let inputPatente = document.getElementById('t_patente');
+        if(this.checked) { inputPatente.classList.remove('d-none'); inputPatente.focus(); } 
+        else { inputPatente.classList.add('d-none'); inputPatente.value = ''; }
+    });
+
+    async function buscarFuncionario() {
+        let rut = document.getElementById('rut_busqueda').value;
+        let msg = document.getElementById('rut_msg');
+        if(rut.length < 8) return; 
+        try {
+            let res = await fetch(`/horas_extras/api/funcionario/${encodeURIComponent(rut)}`);
+            let data = await res.json();
+            if (data.found) {
+                document.getElementById('nombre_func').value = data.nombre;
+                document.getElementById('calidad_func').value = data.calidad;
+                document.getElementById('grado_func').value = data.grado;
+                msg.classList.add('d-none');
+            } else {
+                limpiarDatos();
+                msg.textContent = data.msg || "No encontrado.";
+                msg.classList.remove('d-none');
+            }
+        } catch (e) {
+            console.error(e);
+            msg.textContent = "Error de conexión.";
+            msg.classList.remove('d-none');
+        }
+    }
+
+    function limpiarDatos() {
+        document.getElementById('nombre_func').value = "";
+        document.getElementById('calidad_func').value = "";
+        document.getElementById('grado_func').value = "";
+    }
+
+    function agregarFila() {
+        let fecha = document.getElementById('t_fecha').value;
+        let ini = document.getElementById('t_ini').value;
+        let fin = document.getElementById('t_fin').value;
+        let act = document.getElementById('t_act').value;
+        let vehiculo = document.getElementById('t_vehiculo').checked;
+        let patente = document.getElementById('t_patente').value;
+
+        if(!fecha || !ini || !fin) { alert('Complete fecha y horarios'); return; }
+
+        if (ini >= fin) {
+            if(!confirm("La hora de término es menor a la de inicio. ¿Es un turno que termina al día siguiente?")) { return; }
+        }
+
+        let duplicado = filas.find(f => f.fecha === fecha && f.inicio === ini);
+        if(duplicado) { alert("Ya existe un registro con esa fecha y hora de inicio."); return; }
+
+        let dFecha = new Date(fecha + "T00:00:00");
+        let dIni = new Date(`2000-01-01T${ini}`);
+        let dFin = new Date(`2000-01-01T${fin}`);
+        let cruzaNoche = false;
+
+        if (dFin < dIni) { dFin.setDate(dFin.getDate() + 1); cruzaNoche = true; }
+
+        let diffHrs = ((dFin - dIni) / 3600000).toFixed(2);
+        let diaSem = dFecha.getDay(); 
+        let horaIni = parseInt(ini.split(':')[0]);
+        let tipo = "DIURNO";
+        let label = "25%";
+        let badge = "bg-info text-dark";
+
+        if(diaSem === 0 || diaSem === 6 || horaIni >= 21 || cruzaNoche) {
+            tipo = "NOCTURNO"; label = "50% (Noche/FDS)"; badge = "bg-dark text-white";
+        }
+
+        filas.push({
+            fecha: fecha, inicio: ini, termino: fin, actividad: act,
+            vehiculo: vehiculo, patente: patente, horas_estimadas: diffHrs,
+            tipo_jornada: tipo, label_visual: label, badge_visual: badge,
+            extra_visual: cruzaNoche ? '<span class="text-danger fw-bold ms-1">+1 día</span>' : ''
+        });
+        render();
+        document.getElementById('t_act').value = "";
+        document.getElementById('t_vehiculo').checked = false;
+        document.getElementById('t_patente').classList.add('d-none');
+        document.getElementById('t_fecha').focus();
+    }
+
+    function render() {
+        let tbody = document.getElementById('tabla_body');
+        tbody.innerHTML = "";
+        let total = 0;
+        if(filas.length === 0) {
+            tbody.innerHTML = '<tr id="row_empty"><td colspan="7" class="text-center text-muted py-4">No hay jornadas agregadas.</td></tr>';
+            document.getElementById('badge_total').textContent = "0.0 Hrs Total";
+            return;
+        }
+        filas.forEach((f, i) => {
+            total += parseFloat(f.horas_estimadas);
+            let vehiculoHtml = f.vehiculo ? `<i class="bi bi-car-front-fill text-primary"></i> <small>${f.patente}</small>` : '<span class="text-muted">-</span>';
+            let row = `<tr>
+                <td>${f.fecha}</td> <td>${f.inicio} - ${f.termino} ${f.extra_visual}</td>
+                <td class="text-center fw-bold">${f.horas_estimadas}</td>
+                <td class="text-center"><span class="badge ${f.badge_visual}">${f.label_visual}</span></td>
+                <td>${f.actividad}</td> <td class="text-center">${vehiculoHtml}</td>
+                <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="borrar(${i})"><i class="bi bi-trash"></i></button></td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+        document.getElementById('badge_total').textContent = total.toFixed(2) + " Hrs Total";
+    }
+
+    function borrar(i) { filas.splice(i, 1); render(); }
+
+    function enviarFormulario(e) {
+        if(filas.length === 0) { e.preventDefault(); alert('Debe agregar al menos una jornada.'); return; }
+        document.getElementById('detalle_json').value = JSON.stringify(filas);
+    }
+</script>
+{% endblock %}

@@ -1,11 +1,13 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app, jsonify
+from werkzeug.utils import secure_filename
 from app.services.contratos_service import ContratosService
 from app.models.contratos import ContratoHonorario, TipoContratoHonorario, AutoridadFirmante
 from app.models.programas import Programa
 from app.models.personas import Persona
 from app.extensions import db
 import os
-from werkzeug.utils import secure_filename
+import csv
+import io
 
 # Definimos el Blueprint
 contratos_bp = Blueprint('contratos_bp', __name__, url_prefix='/contratos')
@@ -87,6 +89,8 @@ def nuevo_contrato():
     try:
         programas = Programa.query.order_by(Programa.id.desc()).all()
         tipos_contrato = TipoContratoHonorario.query.all()
+        # IMPORTANTE: Cargamos las autoridades para pasarlas al template
+        # Esto permite que los selectores de Alcalde/Secretario funcionen correctamente
         autoridades = AutoridadFirmante.query.all()
         
         return render_template('contratos/create.html', 
@@ -100,9 +104,8 @@ def nuevo_contrato():
 @contratos_bp.route('/editar/<int:id>', methods=['GET', 'POST'])
 def editar_contrato(id):
     """
-    Permite modificar un contrato existente (Solo datos administrativos básicos).
-    Nota: La edición financiera compleja (cuotas) suele requerir anulación y re-creación 
-    para mantener la integridad contable, por eso aquí se mantiene simple.
+    Permite modificar un contrato existente.
+    Ahora incluye recálculo financiero completo si se modifica el monto/cuotas.
     """
     contrato = ContratoHonorario.query.get_or_404(id)
 
@@ -137,11 +140,15 @@ def editar_contrato(id):
             return redirect(url_for('contratos_bp.editar_contrato', id=id))
 
     try:
+        # --- CORRECCIÓN: Se agrega la consulta de programas ---
+        programas = Programa.query.order_by(Programa.id.desc()).all()
+        
         tipos = TipoContratoHonorario.query.all()
         autoridades = AutoridadFirmante.query.all()
         
         return render_template('contratos/edit.html', 
                                contrato=contrato, 
+                               programas=programas, # SE AGREGA ESTA VARIABLE QUE FALTABA
                                tipos_contrato=tipos, 
                                autoridades=autoridades)
     except Exception as e:
@@ -298,3 +305,51 @@ def obtener_cuentas_programa(programa_id):
     except Exception as e:
         print(f"Error API Cuentas: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@contratos_bp.route('/carga-masiva', methods=['GET', 'POST'])
+def carga_masiva():
+    """
+    Procesa la carga masiva de honorarios para la Municipalidad de Santa Juana.
+    Requiere un CSV con 12 columnas incluyendo Rut Alcalde y Rut Secretario.
+    """
+    if request.method == 'POST':
+        archivo = request.files.get('archivo_csv')
+        
+        # Validaciones iniciales del archivo
+        if not archivo or not archivo.filename.endswith('.csv'):
+            flash('Por favor, sube un archivo CSV válido (.csv).', 'danger')
+            return redirect(request.url)
+
+        try:
+            # 1. Lectura del flujo de datos con codificación UTF-8
+            # Usamos 'utf-8-sig' por si el archivo viene de Excel con BOM (marca de orden de bytes)
+            contenido = archivo.stream.read().decode("utf-8-sig")
+            stream = io.StringIO(contenido, newline=None)
+            
+            # 2. Configuración del Lector CSV
+            # Delimitador ';' es el estándar en Excel configurado para Chile
+            lector = csv.DictReader(stream, delimiter=';') 
+            
+            # 3. Ejecución del proceso en el Service
+            # Este método ahora busca a los firmantes por RUT de forma exacta
+            resultado = ContratosService.procesar_carga_masiva(lector)
+            
+            # 4. Notificación de resultados al usuario
+            if resultado['errores'] == 0:
+                flash(f"Éxito: Se han cargado {resultado['exitos']} contratos correctamente.", 'success')
+            else:
+                flash(
+                    f"Carga parcial: {resultado['exitos']} exitosos y {resultado['errores']} fallidos. "
+                    f"Revisa los logs de la consola para ver los RUTs que fallaron.", 
+                    'warning'
+                )
+                
+        except UnicodeDecodeError:
+            flash('Error de codificación: Asegúrate de guardar el CSV como UTF-8.', 'danger')
+        except Exception as e:
+            db.session.rollback() # Seguridad ante fallos inesperados
+            flash(f'Error crítico procesando el archivo: {str(e)}', 'danger')
+        
+        return redirect(url_for('contratos_bp.listar'))
+
+    return render_template('contratos/carga_masiva.html')

@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-0 text-gray-800">
+                <i class="bi bi-pencil-square text-warning"></i> Editar Solicitud #{{ orden.id }}
+            </h3>
+            <p class="text-muted small mb-0">Funcionario: {{ orden.funcionario.nombres }} {{ orden.funcionario.apellido_paterno }}</p>
+        </div>
+        <a href="{{ url_for('he_bp.index') }}" class="btn btn-secondary shadow-sm">Volver</a>
+    </div>
+
+    <form method="POST" onsubmit="enviarFormulario(event)">
+        <input type="hidden" name="detalle_json" id="detalle_json">
+
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-start border-4 border-warning">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">N° Decreto</label>
+                                <input type="text" name="numero_decreto" class="form-control" value="{{ orden.decreto_auth.numero_decreto or '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Fecha Decreto *</label>
+                                <input type="date" name="fecha_decreto" class="form-control" value="{{ orden.decreto_auth.fecha_decreto }}" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Firma Alcalde</label>
+                                <select name="firmante_alcalde" class="form-select" required>
+                                    {% for f in firmantes %}
+                                    <option value="{{ f.id }}" {{ 'selected' if f.id == orden.decreto_auth.id_firmante_alcalde }}>{{ f.firma_linea_1 }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Firma Secretario</label>
+                                <select name="firmante_secretario" class="form-select" required>
+                                    {% for f in firmantes %}
+                                    <option value="{{ f.id }}" {{ 'selected' if f.id == orden.decreto_auth.id_firmante_secretario }}>{{ f.firma_linea_1 }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card shadow-sm border-start border-4 border-success">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 fw-bold text-success">Planificación de Jornadas</h6>
+                        <span class="badge bg-success" id="badge_total">0.0 Hrs</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2 align-items-end bg-light p-3 rounded border mb-3">
+                            <div class="col-md-2"><input type="date" id="t_fecha" class="form-control form-control-sm"></div>
+                            <div class="col-md-2"><input type="time" id="t_ini" class="form-control form-control-sm"></div>
+                            <div class="col-md-2"><input type="time" id="t_fin" class="form-control form-control-sm"></div>
+                            <div class="col-md-4"><input type="text" id="t_act" class="form-control form-control-sm" placeholder="Actividad"></div>
+                            <div class="col-md-2 d-grid">
+                                <button type="button" class="btn btn-success btn-sm" onclick="agregarFila()">+ Agregar</button>
+                            </div>
+                        </div>
+
+                        <table class="table table-sm align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Fecha</th><th>Horario</th><th>Hrs</th><th>Actividad</th><th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla_body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 text-center pb-5">
+                <button type="submit" class="btn btn-primary btn-lg px-5 shadow">ACTUALIZAR SOLICITUD</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    let filas = [];
+
+    // Cargar datos existentes al iniciar
+    window.onload = function() {
+        {% for p in orden.planificacion %}
+        filas.push({
+            fecha: "{{ p.fecha }}",
+            inicio: "{{ p.hora_inicio.strftime('%H:%M') }}",
+            termino: "{{ p.hora_termino.strftime('%H:%M') }}",
+            actividad: "{{ p.actividad_especifica }}",
+            horas_estimadas: "{{ p.horas_estimadas }}",
+            vehiculo: {{ 'true' if p.solicita_vehiculo else 'false' }},
+            patente: "{{ p.placa_patente or '' }}"
+        });
+        {% endfor %}
+        render();
+    };
+
+    function agregarFila() {
+        let f = document.getElementById('t_fecha').value;
+        let i = document.getElementById('t_ini').value;
+        let t = document.getElementById('t_fin').value;
+        let a = document.getElementById('t_act').value;
+
+        if(!f || !i || !t) return alert("Complete los campos");
+
+        // Cálculo rápido de horas para la vista
+        let hrs = (new Date(`2000-01-01T${t}`) - new Date(`2000-01-01T${i}`)) / 3600000;
+        if(hrs < 0) hrs += 24;
+
+        filas.push({
+            fecha: f, inicio: i, termino: t, actividad: a, 
+            horas_estimadas: hrs.toFixed(2), vehiculo: false, patente: ""
+        });
+        render();
+    }
+
+    function render() {
+        let tbody = document.getElementById('tabla_body');
+        tbody.innerHTML = "";
+        let total = 0;
+        filas.forEach((f, i) => {
+            total += parseFloat(f.horas_estimadas);
+            tbody.innerHTML += `<tr>
+                <td>${f.fecha}</td><td>${f.inicio} - ${f.termino}</td>
+                <td class="fw-bold">${f.horas_estimadas}</td><td>${f.actividad}</td>
+                <td class="text-end"><button type="button" class="btn btn-sm btn-danger" onclick="borrar(${i})">x</button></td>
+            </tr>`;
+        });
+        document.getElementById('badge_total').textContent = total.toFixed(2) + " Hrs";
+    }
+
+    function borrar(i) { filas.splice(i, 1); render(); }
+
+    function enviarFormulario(e) {
+        if(filas.length === 0) { e.preventDefault(); return alert("Agregue al menos una jornada"); }
+        document.getElementById('detalle_json').value = JSON.stringify(filas);
+    }
+</script>
+{% endblock %}

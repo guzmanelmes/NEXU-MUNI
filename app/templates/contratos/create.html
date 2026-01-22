@@ -9,6 +9,7 @@
     <form action="{{ url_for('contratos_bp.nuevo_contrato') }}" method="POST" id="formContrato" onsubmit="event.preventDefault(); enviarFormularioAvanzado();">
         
         <input type="hidden" name="json_detalle_completo" id="input_json_completo">
+        <input type="hidden" name="monto_total" id="hidden_monto_total">
 
         <div class="card shadow mb-4 border-left-primary">
             <div class="card-header py-3">
@@ -37,16 +38,26 @@
                     <div class="col-md-6">
                         <label class="fw-bold small">Ministro de Fe (Secretario)</label>
                         <select name="secretario_id" class="form-select" required>
+                            <option value="">Seleccione Secretario...</option>
                             {% for aut in autoridades %}
-                                {% if 'SECRETARIO' in aut.cargo.upper() %}<option value="{{ aut.id }}">{{ aut.nombre }}</option>{% endif %}
+                                {% if 'SECRETARIO' in aut.cargo.upper() %}
+                                    <option value="{{ aut.id }}">
+                                        {{ aut.persona.nombres }} {{ aut.persona.apellido_paterno }} ({{ aut.cargo }})
+                                    </option>
+                                {% endif %}
                             {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-6">
                         <label class="fw-bold small">Autoridad (Alcalde)</label>
                         <select name="autoridad_id" class="form-select" required>
+                            <option value="">Seleccione Autoridad...</option>
                             {% for aut in autoridades %}
-                                {% if 'SECRETARIO' not in aut.cargo.upper() %}<option value="{{ aut.id }}">{{ aut.nombre }}</option>{% endif %}
+                                {% if 'SECRETARIO' not in aut.cargo.upper() %}
+                                    <option value="{{ aut.id }}">
+                                        {{ aut.persona.nombres }} {{ aut.persona.apellido_paterno }} ({{ aut.cargo }})
+                                    </option>
+                                {% endif %}
                             {% endfor %}
                         </select>
                     </div>
@@ -157,7 +168,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="small fw-bold">N° Cuotas</label>
-                        <input type="number" id="input_num_cuotas" class="form-control text-center" value="1" min="1">
+                        <input type="number" name="numero_cuotas" id="input_num_cuotas" class="form-control text-center" value="1" min="1">
                     </div>
                     <div class="col-md-5">
                         <button type="button" class="btn btn-warning w-100 fw-bold text-dark shadow-sm" onclick="inicializarMatrizPagos()">
@@ -314,9 +325,7 @@
 </div>
 
 <script>
-    // =====================================================
-    // 1. VALIDACIONES Y UTILIDADES
-    // =====================================================
+    // ... FUNCIONES DE UTILIDAD IGUALES ...
     function validarFechas() {
         const inicio = document.getElementById('fecha_inicio').value;
         const fin = document.getElementById('fecha_fin').value;
@@ -341,7 +350,7 @@
     }
 
     // =====================================================
-    // 2. FINANZAS (JS)
+    // 2. FINANZAS (JS CORREGIDO - AÑADIDO cuenta_id)
     // =====================================================
     let CUOTAS = []; 
     let CUENTAS_DISPONIBLES = []; 
@@ -387,7 +396,9 @@
             let a = anio;
             while(m > 12) { m -= 12; a++; }
 
+            // --- CORRECCIÓN AQUÍ: Se añade cuenta_id al objeto ---
             let dist = CUENTAS_DISPONIBLES.map((cta, idx) => ({
+                cuenta_id: cta.id,  // ESTO FALTABA
                 codigo: cta.codigo,
                 nombre: cta.nombre,
                 monto: (idx === 0) ? monto : 0 
@@ -399,6 +410,8 @@
         renderizarTablaMaestra();
         seleccionarCuota(0);
     }
+
+    // ... RESTO DE FUNCIONES IGUALES ...
 
     function renderizarTablaMaestra() {
         const tbody = document.getElementById('tbody_cuotas_maestro');
@@ -504,7 +517,9 @@
 
         CUOTAS.forEach((c, i) => {
             if (i !== CUOTA_ACTIVA_IDX) {
+                // Copiamos cuenta_id también
                 c.distribucion = modelo.map(item => ({
+                    cuenta_id: item.cuenta_id, 
                     codigo: item.codigo,
                     nombre: item.nombre,
                     monto: Math.round((item.monto * c.monto) / montoModelo) 
@@ -538,13 +553,14 @@
         }
 
         document.getElementById('input_json_completo').value = JSON.stringify(CUOTAS);
+        
+        // --- CORRECCIÓN: Llenamos el input hidden con el valor numérico limpio ---
+        document.getElementById('hidden_monto_total').value = totalInput;
+        
         document.getElementById('formContrato').submit();
     }
 
-    // =====================================================
-    // 3. HORARIO Y RUT (CON NUEVA VALIDACIÓN)
-    // =====================================================
-    
+    // ... RESTO DE FUNCIONES (HORARIO, RUT) IGUALES ...
     function cargarHorarioEstandar() {
         const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'];
         dias.forEach(dia => {
@@ -575,8 +591,7 @@
             }
         });
         document.getElementById('badge-total-horas').innerText = (total/60).toFixed(1) + " Hrs";
-
-        // --- VALIDACIÓN DE EXCESO DE HORAS ---
+        
         const declarado = parseFloat(document.getElementById('input-horas').value) || 0;
         const horasSemanales = (total/60);
         const alerta = document.getElementById('alerta-horas');
@@ -602,12 +617,12 @@
         
         if(esComp) { 
             inpH.value = 44; 
-            cardH.style.display='block'; // CORRECCIÓN: Siempre visible
+            cardH.style.display='block'; 
         } else { 
             inpH.removeAttribute('readonly'); 
             cardH.style.display='block'; 
         }
-        calcularHoras(); // Recalcular al cambiar
+        calcularHoras(); 
     }
 
     function obtenerNombreMes(m) { const n=["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]; return n[m]||""; }

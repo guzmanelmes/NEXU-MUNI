@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="bi bi-person-plus-fill text-primary"></i> Vincular Nueva Autoridad
+        </h1>
+        <a href="{{ url_for('autoridades_bp.listar') }}" class="btn btn-secondary shadow-sm">
+            <i class="bi bi-arrow-left"></i> Volver al Listado
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card shadow mb-4 border-bottom-primary">
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 fw-bold text-primary">Asignación de Rol y Firma</h6>
+                </div>
+                <div class="card-body p-4">
+                    <form action="{{ url_for('autoridades_bp.nueva') }}" method="POST" id="formFirmante">
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold text-primary">1. Buscar por RUT</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-card-text"></i></span>
+                                    <input type="text" name="rut_filtro" id="rut_filtro" class="form-control fw-bold" 
+                                           placeholder="12.345.678-9" maxlength="12" required>
+                                    <button class="btn btn-primary px-3" type="button" id="btnBuscarPersona" title="Consultar en Catálogo de Personas">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </div>
+                                <div id="rutFeedback" class="small mt-1"></div>
+                            </div>
+
+                            <div class="col-md-7">
+                                <label class="form-label fw-bold">Nombre Completo (Desde Catálogo)</label>
+                                <input type="text" id="nombre_persona" class="form-control bg-light" readonly required 
+                                       placeholder="El nombre aparecerá al buscar el RUT">
+                                </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Cargo Institucional</label>
+                                <select name="cargo" class="form-select" required>
+                                    <option value="" selected disabled>Seleccione un rol...</option>
+                                    <optgroup label="Alcaldía">
+                                        <option value="Alcalde">Alcalde Titular</option>
+                                        <option value="Alcalde (S)">Alcalde Subrogante</option>
+                                    </optgroup>
+                                    <optgroup label="Fe Pública">
+                                        <option value="Secretario Municipal">Secretario Municipal Titular</option>
+                                        <option value="Secretario Municipal (S)">Secretario Municipal (S)</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Decreto de Nombramiento</label>
+                                <input type="text" name="decreto" class="form-control" placeholder="Ej: Dec. N° 450/2025">
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" name="es_subrogante" id="subroganteCheck">
+                                    <label class="form-check-label fw-bold" for="subroganteCheck">Es Subrogante</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h6 class="text-primary fw-bold mb-3">
+                            <i class="bi bi-file-earmark-word"></i> Estructura de Firma (Hasta 4 líneas)
+                        </h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Línea 1 (Nombre Completo en Mayúsculas)</label>
+                                <input type="text" name="linea1" id="linea1" class="form-control bg-light" required readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Línea 2 (Profesión / Grado)</label>
+                                <input type="text" name="linea2" id="linea2" class="form-control" placeholder="Ej: INGENIERO CIVIL">
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Línea 3 (Especialidad)</label>
+                                <input type="text" name="linea3" class="form-control" placeholder="Ej: MAGISTER EN GESTIÓN PÚBLICA">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Línea 4 (Cargo Jurídico Final)</label>
+                                <input type="text" name="linea4" class="form-control" placeholder="Ej: ALCALDE">
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end border-top pt-4">
+                            <button type="reset" class="btn btn-outline-secondary px-4 me-md-2" id="btnLimpiar">
+                                <i class="bi bi-eraser"></i> Limpiar Todo
+                            </button>
+                            <button type="submit" class="btn btn-primary px-5 shadow">
+                                <i class="bi bi-save"></i> Guardar Configuración
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- 1. FORMATEO DINÁMICO DE RUT (Puntos y Guion) ---
+function formatearRUT(rut) {
+    let valor = rut.replace(/[^0-9kK]/g, '');
+    if (valor.length < 2) return valor;
+    let cuerpo = valor.slice(0, -1);
+    let dv = valor.slice(-1).toUpperCase();
+    let cuerpoFormateado = '';
+    while (cuerpo.length > 3) {
+        cuerpoFormateado = '.' + cuerpo.slice(-3) + cuerpoFormateado;
+        cuerpo = cuerpo.slice(0, -3);
+    }
+    cuerpoFormateado = cuerpo + cuerpoFormateado;
+    return cuerpoFormateado + '-' + dv;
+}
+
+document.getElementById('rut_filtro').addEventListener('input', function(e) {
+    e.target.value = formatearRUT(e.target.value);
+});
+
+// --- 2. BÚSQUEDA AJAX EN EL CATÁLOGO DE PERSONAS ---
+document.getElementById('btnBuscarPersona').addEventListener('click', function() {
+    const rut = document.getElementById('rut_filtro').value;
+    const feedback = document.getElementById('rutFeedback');
+    
+    if (!rut) return;
+
+    // Consultamos el endpoint de personas
+    fetch(`/personas/api/${rut}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Servidor no disponible');
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const nombreCompleto = `${data.nombres} ${data.apellido_paterno} ${data.apellido_materno}`;
+                document.getElementById('nombre_persona').value = nombreCompleto;
+                
+                // Pre-llenado de Líneas de Firma
+                document.getElementById('linea1').value = nombreCompleto.toUpperCase();
+                if (data.titulo_profesional) {
+                    document.getElementById('linea2').value = data.titulo_profesional.toUpperCase();
+                }
+
+                feedback.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Persona encontrada en catálogo.</span>';
+                document.getElementById('rut_filtro').classList.add('is-valid');
+                document.getElementById('rut_filtro').classList.remove('is-invalid');
+            } else {
+                feedback.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> RUT no registrado. Primero créelo en "Personas".</span>';
+                document.getElementById('rut_filtro').classList.add('is-invalid');
+                limpiarCamposAuto();
+            }
+        })
+        .catch(err => {
+            alert('Error crítico: Asegúrate de que la tabla "personas" existe y el servidor está corriendo.');
+        });
+});
+
+function limpiarCamposAuto() {
+    document.getElementById('nombre_persona').value = '';
+    document.getElementById('linea1').value = '';
+    document.getElementById('linea2').value = '';
+}
+
+document.getElementById('btnLimpiar').addEventListener('click', function() {
+    document.getElementById('rut_filtro').classList.remove('is-valid', 'is-invalid');
+    document.getElementById('rutFeedback').innerHTML = '';
+});
+</script>
+{% endblock %}

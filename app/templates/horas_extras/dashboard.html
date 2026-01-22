@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800 fw-bold">
+                <i class="bi bi-clock-history text-primary"></i> Control de Horas Extras
+            </h1>
+            <p class="text-muted small">Gestión de Solicitudes y Decretos</p>
+        </div>
+        <a href="{{ url_for('he_bp.create_solicitud') }}" class="btn btn-primary fw-bold shadow-sm">
+            <i class="bi bi-plus-lg"></i> Nueva Solicitud
+        </a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-start border-4 border-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="text-xs fw-bold text-primary text-uppercase mb-1">Solicitudes Totales</div>
+                    <div class="h5 mb-0 fw-bold text-gray-800">{{ ordenes|length if ordenes else 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-start border-4 border-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="text-xs fw-bold text-warning text-uppercase mb-1">Pendientes Firma</div>
+                    <div class="h5 mb-0 fw-bold text-gray-800">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 bg-white">
+            <h6 class="m-0 fw-bold text-primary">Listado de Órdenes de Servicio</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-uppercase small text-muted">
+                        <tr>
+                            <th class="ps-3">Folio</th>
+                            <th>Funcionario</th>
+                            <th>N° Decreto</th>
+                            <th>Fecha Dec.</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-end pe-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if ordenes %}
+                            {% for orden in ordenes %}
+                            <tr>
+                                <td class="ps-3 fw-bold text-muted">#{{ orden.id }}</td>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ orden.funcionario.nombres }} {{ orden.funcionario.apellido_paterno }}</div>
+                                    <div class="small text-muted">{{ orden.rut_funcionario }}</div>
+                                </td>
+                                
+                                <td class="fw-bold text-primary">
+                                    {% if orden.decreto_auth and orden.decreto_auth.numero_decreto %}
+                                        {{ orden.decreto_auth.numero_decreto }}
+                                    {% else %}
+                                        <span class="text-muted italic small">No asignado</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if orden.decreto_auth and orden.decreto_auth.fecha_decreto %}
+                                        {{ orden.decreto_auth.fecha_decreto.strftime('%d-%m-%Y') }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="text-center">
+                                    {% if orden.estado == 'BORRADOR' %}
+                                        <span class="badge bg-secondary">Borrador</span>
+                                    {% elif orden.estado == 'AUTORIZADA' %}
+                                        <span class="badge bg-success">Autorizada</span>
+                                    {% elif orden.es_emergencia %}
+                                        <span class="badge bg-danger" title="{{ orden.justificacion_emergencia }}">Emergencia (+40h)</span>
+                                    {% else %}
+                                        <span class="badge bg-light text-dark border">{{ orden.estado }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-3">
+                                    <div class="btn-group shadow-sm">
+                                        <a href="{{ url_for('he_bp.descargar_word', id=orden.id) }}" class="btn btn-sm btn-outline-info" title="Descargar Decreto Word">
+                                            <i class="bi bi-file-earmark-word"></i>
+                                        </a>
+
+                                        <a href="{{ url_for('he_bp.edit_solicitud', id=orden.id) }}" class="btn btn-sm btn-outline-warning" title="Editar Solicitud">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </a>
+                                        
+                                        <button class="btn btn-sm btn-outline-primary" title="Ver Detalle" onclick="verDetalle({{ orden.id }})">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        
+                                        <button class="btn btn-sm btn-outline-secondary" title="Descargar PDF">
+                                            <i class="bi bi-file-earmark-pdf"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox display-1 opacity-25"></i>
+                                    <p class="mt-3 mb-0">No hay solicitudes registradas.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="modal fade" id="modalDetalle" tabindex="-1" aria-labelledby="modalDetalleLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="modalDetalleLabel">
+                    <i class="bi bi-info-circle me-2"></i>Detalle de Solicitud #<span id="det_id"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row mb-4">
+                    <div class="col-md-7">
+                        <label class="text-muted small text-uppercase fw-bold mb-1 d-block">Funcionario</label>
+                        <h5 id="det_funcionario" class="mb-0 fw-bold text-dark"></h5>
+                        <small id="det_rut" class="text-muted"></small>
+                    </div>
+                    <div class="col-md-5 text-md-end">
+                        <label class="text-muted small text-uppercase fw-bold mb-1 d-block">Estado</label>
+                        <span id="det_estado" class="badge p-2 px-3"></span>
+                    </div>
+                </div>
+
+                <div class="row mb-4 p-3 bg-light rounded mx-0">
+                    <div class="col-6">
+                        <label class="text-muted small text-uppercase fw-bold mb-1 d-block">N° Decreto</label>
+                        <span id="det_decreto" class="fw-bold"></span>
+                    </div>
+                    <div class="col-6">
+                        <label class="text-muted small text-uppercase fw-bold mb-1 d-block">Fecha Decreto</label>
+                        <span id="det_fecha_decreto" class="fw-bold"></span>
+                    </div>
+                </div>
+
+                <div id="area_emergencia" class="alert alert-danger d-none mb-4">
+                    <div class="d-flex">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <div>
+                            <strong class="d-block">Alerta de Emergencia (+40h)</strong>
+                            <small id="det_justificacion"></small>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold mb-3 text-primary border-bottom pb-2">Planificación de Horas</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle">
+                        <thead class="bg-light">
+                            <tr class="small text-muted text-uppercase">
+                                <th>Fecha</th>
+                                <th>Horario</th>
+                                <th class="text-center">Hrs</th>
+                                <th class="text-center">Tipo</th>
+                                <th>Actividad</th>
+                            </tr>
+                        </thead>
+                        <tbody id="det_tabla_body" class="small">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function verDetalle(id) {
+    // Usamos Fetch para obtener el JSON del nuevo endpoint
+    fetch(`/horas_extras/solicitud/detalle/${id}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Error al obtener datos');
+            return response.json();
+        })
+        .then(data => {
+            // Llenar cabecera
+            document.getElementById('det_id').innerText = data.id;
+            document.getElementById('det_funcionario').innerText = data.funcionario;
+            document.getElementById('det_rut').innerText = "RUT: " + data.rut;
+            document.getElementById('det_decreto').innerText = data.decreto;
+            document.getElementById('det_fecha_decreto').innerText = data.fecha_decreto;
+            
+            // Estado y color
+            const badge = document.getElementById('det_estado');
+            badge.innerText = data.estado;
+            badge.className = "badge p-2 px-3 " + 
+                (data.estado === 'BORRADOR' ? 'bg-secondary' : 
+                 data.estado === 'AUTORIZADA' ? 'bg-success' : 'bg-info text-dark');
+
+            // Manejo de Emergencia
+            const areaE = document.getElementById('area_emergencia');
+            if(data.es_emergencia) {
+                areaE.classList.remove('d-none');
+                document.getElementById('det_justificacion').innerText = data.justificacion;
+            } else {
+                areaE.classList.add('d-none');
+            }
+
+            // Llenar Tabla de Jornadas
+            const tbody = document.getElementById('det_tabla_body');
+            tbody.innerHTML = "";
+            
+            if(data.planificacion.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">No hay jornadas registradas</td></tr>';
+            } else {
+                data.planificacion.forEach(p => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="fw-bold">${p.fecha}</td>
+                            <td>${p.horario}</td>
+                            <td class="text-center fw-bold">${p.horas}</td>
+                            <td class="text-center">
+                                <span class="badge ${p.tipo === 'DIURNO' ? 'bg-info text-dark' : 'bg-dark'}">${p.tipo}</span>
+                            </td>
+                            <td>${p.actividad}</td>
+                        </tr>`;
+                });
+            }
+
+            // Mostrar el Modal
+            const myModal = new bootstrap.Modal(document.getElementById('modalDetalle'));
+            myModal.show();
+        })
+        .catch(error => {
+            console.error(error);
+            alert("No se pudo cargar el detalle de la solicitud.");
+        });
+}
+</script>
+{% endblock %}

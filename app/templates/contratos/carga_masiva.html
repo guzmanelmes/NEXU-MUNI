@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 mt-3">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="bi bi-file-earmark-arrow-up text-primary"></i> Carga Masiva de Honorarios
+        </h1>
+        <div>
+            <button onclick="descargarPlantilla()" class="btn btn-outline-success shadow-sm me-2">
+                <i class="bi bi-download"></i> Descargar Plantilla CSV
+            </button>
+            <a href="{{ url_for('contratos_bp.listar') }}" class="btn btn-secondary shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-5 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-light">
+                    <h6 class="m-0 fw-bold text-primary">Estructura del Archivo (14 Columnas)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info small">
+                        <i class="bi bi-info-circle-fill"></i> 
+                        El archivo debe ser <strong>.csv</strong> delimitado por <strong>punto y coma (;)</strong>.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered small table-hover">
+                            <thead class="bg-light">
+                                <tr><th>Encabezado</th><th>Formato / Ejemplo</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="fw-bold">rut</td><td>12.345.678-9 (Con puntos y guion)</td></tr>
+                                <tr><td class="fw-bold">programa_id</td><td>ID numérico (ej: 1)</td></tr>
+                                <tr><td class="fw-bold">numero decreto</td><td>Texto (ej: 120/2026)</td></tr>
+                                <tr><td class="fw-bold">fecha decreto</td><td>AAAA-MM-DD</td></tr>
+                                <tr><td class="fw-bold">Horas semanales</td><td>Número entero (ej: 44)</td></tr>
+                                <tr><td class="fw-bold">Rut Alcalde</td><td>11.111.111-1 (Busca por RUT y Cargo)</td></tr>
+                                <tr><td class="fw-bold">Rut Secretario</td><td>22.222.222-2 (Busca por RUT y Cargo)</td></tr>
+                                <tr><td class="fw-bold">Fecha Inicio</td><td>AAAA-MM-DD</td></tr>
+                                <tr><td class="fw-bold">Fecha Termino</td><td>AAAA-MM-DD</td></tr>
+                                <tr><td class="fw-bold">Fecha Contrato</td><td>AAAA-MM-DD</td></tr>
+                                <tr><td class="fw-bold">Monto Total</td><td>Valor total sin puntos (ej: 12000000)</td></tr>
+                                <tr><td class="fw-bold">Numero de Cuotas</td><td>Cantidad de pagos (ej: 12)</td></tr>
+                                <tr><td class="fw-bold">cuenta_presupuestaria</td><td>Código completo (ej: 215.21.03.001)</td></tr>
+                                <tr><td class="fw-bold">Funciones</td><td>Descripción de labores</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-7 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-body p-5 text-center">
+                    <form action="{{ url_for('contratos_bp.carga_masiva') }}" method="POST" enctype="multipart/form-data" id="uploadForm">
+                        <div class="mb-4">
+                            <i class="bi bi-cloud-arrow-up display-1 text-primary"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Subir Archivo de Carga</h4>
+                        <p class="text-muted small mb-4">
+                            El sistema procesará cada fila, validará los RUTs de las autoridades, 
+                            creará el contrato y descontará el saldo presupuestario automáticamente.
+                        </p>
+                        
+                        <div class="input-group mb-3 justify-content-center">
+                            <input type="file" name="archivo_csv" class="form-control" style="max-width: 400px;" accept=".csv" required>
+                        </div>
+                        
+                        <div id="spinner" style="display: none;" class="mt-4">
+                            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="text-primary fw-bold mt-2">Procesando información, por favor espere...</p>
+                            <p class="text-muted small">Esto puede tardar unos segundos dependiendo del tamaño del archivo.</p>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg px-5 shadow mt-3" id="btnSubmit">
+                            <i class="bi bi-play-circle-fill"></i> Iniciar Carga Masiva
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function descargarPlantilla() {
+        // Encabezados exactos que espera el backend (Python)
+        const encabezados = "rut;programa_id;numero decreto;fecha decreto;Horas semanales;Rut Alcalde;Rut Secretario;Fecha Inicio;Fecha Termino;Fecha Contrato;Monto Total;Numero de Cuotas;cuenta_presupuestaria;Funciones";
+        
+        // Fila de ejemplo robusta
+        const ejemplo = "12.345.678-9;1;120/2026;2026-01-05;44;11.111.111-1;22.222.222-2;2026-01-01;2026-12-31;2026-01-02;12000000;12;215.21.03.001;Apoyo administrativo en Secretaría Municipal";
+        
+        const contenidoCsv = encabezados + "\n" + ejemplo;
+        
+        // CORRECCIÓN CRÍTICA: Agregamos "\uFEFF" (BOM) al inicio.
+        // Esto permite que Excel reconozca el archivo como UTF-8 y muestre bien los acentos.
+        const blob = new Blob(["\uFEFF" + contenidoCsv], { type: 'text/csv;charset=utf-8;' });
+        
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        
+        link.setAttribute("href", url);
+        link.setAttribute("download", "plantilla_honorarios_santa_juana.csv");
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Feedback visual al enviar
+    document.getElementById('uploadForm').onsubmit = function() {
+        document.getElementById('btnSubmit').style.display = 'none';
+        document.getElementById('spinner').style.display = 'block';
+    };
+</script>
+{% endblock %}

@@ -6,8 +6,8 @@ from marshmallow import ValidationError
 import pandas as pd
 import io
 
-# Definimos el Blueprint
-personas_bp = Blueprint('personas_bp', __name__, url_prefix='/api/personas')
+# 1. Ajuste de Prefijo para compatibilidad con AJAX: /personas/api/<rut>
+personas_bp = Blueprint('personas_bp', __name__, url_prefix='/personas')
 
 # Instancias de Schemas
 persona_schema = PersonaSchema()
@@ -17,20 +17,32 @@ personas_schema = PersonaSchema(many=True)
 # RUTAS API (JSON - Para sistemas externos o AJAX)
 # =======================================================
 
-@personas_bp.route('/', methods=['GET'])
+@personas_bp.route('/api/', methods=['GET'])
 def get_personas():
+    """Retorna listado de personas en formato JSON."""
     personas = PersonaService.get_all()
     return jsonify(personas_schema.dump(personas)), 200
 
-@personas_bp.route('/<rut>', methods=['GET'])
+@personas_bp.route('/api/<rut>', methods=['GET'])
 def get_persona(rut):
+    """
+    Busca una persona por RUT. 
+    Actualizado para devolver el campo 'success' requerido por el buscador AJAX.
+    """
     persona = PersonaService.get_by_rut(rut)
     if not persona:
-        return jsonify({"error": "Persona no encontrada"}), 404
-    return jsonify(persona_schema.dump(persona)), 200
+        return jsonify({"success": False, "error": "Persona no encontrada"}), 404
+    
+    # Preparamos la respuesta con el flag 'success' para el frontend
+    data = persona_schema.dump(persona)
+    return jsonify({
+        "success": True,
+        **data # Desempaqueta nombres, apellidos y título profesional
+    }), 200
 
-@personas_bp.route('/', methods=['POST'])
+@personas_bp.route('/api/', methods=['POST'])
 def create_persona():
+    """Crea una nueva persona vía API JSON."""
     json_data = request.get_json()
     if not json_data:
         return jsonify({"error": "No se enviaron datos"}), 400
@@ -47,8 +59,9 @@ def create_persona():
     except Exception as err:
         return jsonify({"error": "Error interno del servidor", "detalle": str(err)}), 500
 
-@personas_bp.route('/<rut>', methods=['PUT'])
+@personas_bp.route('/api/<rut>', methods=['PUT'])
 def update_persona(rut):
+    """Actualiza datos de una persona vía API JSON."""
     json_data = request.get_json()
     try:
         data = persona_schema.load(json_data, partial=True)
@@ -60,8 +73,9 @@ def update_persona(rut):
     except ValidationError as err:
         return jsonify({"errores_validacion": err.messages}), 422
 
-@personas_bp.route('/<rut>', methods=['DELETE'])
+@personas_bp.route('/api/<rut>', methods=['DELETE'])
 def delete_persona(rut):
+    """Elimina una persona del sistema."""
     eliminado = PersonaService.delete(rut)
     if not eliminado:
         return jsonify({"error": "Persona no encontrada"}), 404
@@ -74,11 +88,8 @@ def delete_persona(rut):
 
 @personas_bp.route('/carga_masiva', methods=['GET', 'POST'])
 def carga_masiva():
-    """
-    Renderiza el formulario de carga masiva y procesa el archivo Excel.
-    """
+    """Renderiza el formulario de carga masiva y procesa el archivo Excel."""
     if request.method == 'POST':
-        # 1. Validar que venga el archivo
         if 'archivo_excel' not in request.files:
             flash('No se seleccionó ningún archivo.', 'danger')
             return redirect(request.url)
@@ -90,10 +101,8 @@ def carga_masiva():
 
         if file:
             try:
-                # 2. Llamar al servicio de procesamiento
                 procesados, n_errores, lista_errores = PersonaService.procesar_carga_masiva(file)
                 
-                # 3. Feedback al usuario
                 if procesados > 0:
                     flash(f'Proceso finalizado. Se guardaron/actualizaron {procesados} funcionarios.', 'success')
                 
@@ -107,17 +116,12 @@ def carga_masiva():
                 flash(f'Error crítico al procesar el archivo: {str(e)}', 'danger')
                 return redirect(request.url)
 
-    # GET: Mostrar formulario
     return render_template('personas/carga_masiva.html')
 
 @personas_bp.route('/descargar_plantilla')
 def descargar_plantilla():
-    """
-    Genera y descarga un Excel de ejemplo para la carga masiva.
-    Incluye todas las columnas soportadas por la BD.
-    """
+    """Genera y descarga un Excel de ejemplo para la carga masiva."""
     try:
-        # Definir todas las columnas soportadas
         columnas = [
             'RUT', 'Nombres', 'Apellido Paterno', 'Apellido Materno', 
             'Fecha Nacimiento', 'Sexo', 'Email', 'Telefono', 
@@ -129,30 +133,24 @@ def descargar_plantilla():
         ]
 
         df = pd.DataFrame(columns=columnas)
-        
-        # Agregar fila de ejemplo completa
         df.loc[0] = [
             '12.345.678-9', 'Juan', 'Pérez', 'Soto', 
             '1990-01-01', 'Masculino', 'juan@ejemplo.cl', '+56912345678', 
             'Calle Falsa 123', 'Santa Juana', 'Profesional', 'Ingeniero Informático',
             'Banco Estado', 'Cuenta RUT', '12345678',
-            'No', 'No', '', 'No', # Discapacidad e Inclusión
-            '2024-01-01', '2020-03-01' # Fechas ingreso
+            'No', 'No', '', 'No', 
+            '2024-01-01', '2020-03-01'
         ]
         
-        # Escribir en memoria (BytesIO)
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Plantilla')
-            
-            # Ajustar ancho de columnas (Opcional, mejora visual)
             worksheet = writer.sheets['Plantilla']
             for i, col in enumerate(df.columns):
                 column_len = max(df[col].astype(str).map(len).max(), len(col)) + 2
                 worksheet.column_dimensions[chr(65 + i) if i < 26 else 'AA'].width = column_len
         
         output.seek(0)
-        
         return send_file(
             output, 
             download_name="Plantilla_Carga_Personas_Completa.xlsx", 
