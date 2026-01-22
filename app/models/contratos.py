@@ -7,32 +7,35 @@ from datetime import datetime
 
 class AutoridadFirmante(db.Model):
     """
-    Define quién firma los documentos.
-    Se usa tanto para el Alcalde/Jefe (Autoridad) como para el Secretario Municipal (Ministro de Fe).
-    Incluye las líneas de firma explícitas para generar el Word perfecto.
+    Define quién firma los documentos (Alcalde o Secretario).
+    Ahora el RUT es una llave foránea vinculada oficialmente a la tabla 'personas'.
     """
     __tablename__ = 'cfg_autoridades_firmantes'
     
     id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), nullable=False)
+    # Vinculación oficial: Se elimina 'nombre' para evitar duplicidad de datos
+    rut = db.Column(db.String(12), db.ForeignKey('personas.rut'), unique=False, nullable=False) 
     cargo = db.Column(db.String(100), nullable=False)
     es_subrogante = db.Column(db.Boolean, default=False)
     decreto_nombramiento = db.Column(db.String(100), nullable=True) 
 
-    # --- CAMPOS DE FIRMA (Soportan hasta 4 líneas) ---
+    # --- CAMPOS DE FIRMA (Estructura para el documento Word) ---
     firma_linea_1 = db.Column(db.String(150), nullable=False) 
     firma_linea_2 = db.Column(db.String(150), nullable=True) 
     firma_linea_3 = db.Column(db.String(150), nullable=True) 
     firma_linea_4 = db.Column(db.String(150), nullable=True) 
 
+    # RELACIÓN: Permite acceder a los datos de la persona (nombres, títulos, etc.) en tiempo real
+    persona = db.relationship('Persona', backref='config_firmante')
+
     def __repr__(self):
         tipo = "(S)" if self.es_subrogante else "(T)"
-        return f'<Autoridad {self.nombre} {tipo}>'
+        # El nombre ahora se obtiene dinámicamente desde la relación 'persona'
+        return f'<Autoridad RUT: {self.rut} Cargo: {self.cargo} {tipo}>'
 
 class TipoContratoHonorario(db.Model):
     """
-    Define las reglas de negocio del contrato.
-    Ej: "Experto (Jornada Completa)", "Monitor (Por hora)"
+    Define las reglas de negocio y la plantilla Word asociada.
     """
     __tablename__ = 'cfg_tipos_contrato'
     
@@ -51,40 +54,35 @@ class TipoContratoHonorario(db.Model):
 
 class ContratoCuotaDetalle(db.Model):
     """
-    NIVEL 3: Detalle financiero de una cuota específica.
-    Si una cuota es de $100.000, aquí se dice:
-    - $50.000 de la cuenta 215...001
-    - $50.000 de la cuenta 215...002
+    NIVEL 3: Imputación presupuestaria específica por cuota.
     """
     __tablename__ = 'contratos_cuotas_detalle'
     
     id = db.Column(db.Integer, primary_key=True)
     cuota_id = db.Column(db.Integer, db.ForeignKey('contratos_cuotas.id', ondelete='CASCADE'), nullable=False)
     
-    codigo_cuenta = db.Column(db.String(50), nullable=False) # El código presupuestario
-    monto_parcial = db.Column(db.Integer, nullable=False)    # Cuánto aporta esta cuenta a la cuota
+    codigo_cuenta = db.Column(db.String(50), nullable=False) 
+    monto_parcial = db.Column(db.Integer, nullable=False)    
 
     def __repr__(self):
         return f'<Detalle Cuota {self.cuota_id}: {self.codigo_cuenta} - ${self.monto_parcial}>'
 
 class ContratoCuota(db.Model):
     """
-    NIVEL 2: Calendario de pagos.
-    Cada fila representa un mes que se debe pagar al funcionario.
+    NIVEL 2: Calendario de pagos individuales.
     """
     __tablename__ = 'contratos_cuotas'
 
     id = db.Column(db.Integer, primary_key=True)
     contrato_id = db.Column(db.Integer, db.ForeignKey('contratos_honorarios.id', ondelete='CASCADE'), nullable=False)
     
-    numero_cuota = db.Column(db.Integer, nullable=False) # 1, 2, 3...
-    mes = db.Column(db.Integer, nullable=False)          # 1 a 12
-    anio = db.Column(db.Integer, nullable=False)         # 2026
-    monto = db.Column(db.Integer, nullable=False)        # Monto específico de este mes
+    numero_cuota = db.Column(db.Integer, nullable=False) 
+    mes = db.Column(db.Integer, nullable=False)          
+    anio = db.Column(db.Integer, nullable=False)         
+    monto = db.Column(db.Integer, nullable=False)        
     
-    estado = db.Column(db.String(20), default='PENDIENTE') # PENDIENTE, TRAMITADA, PAGADA, ANULADA
+    estado = db.Column(db.String(20), default='PENDIENTE') 
 
-    # Relación con Nivel 3 (Detalles)
     detalles_financieros = db.relationship('ContratoCuotaDetalle', backref='cuota', cascade="all, delete-orphan")
 
     def __repr__(self):
@@ -95,56 +93,54 @@ class ContratoCuota(db.Model):
 # =======================================================
 
 class ContratoHonorario(db.Model):
+    """
+    NIVEL 1: Cabecera legal y financiera del contrato.
+    """
     __tablename__ = 'contratos_honorarios'
 
     id = db.Column(db.Integer, primary_key=True)
     
-    # 1. VINCULACIONES
+    # Vinculaciones Core
     persona_id = db.Column(db.String(12), db.ForeignKey('personas.rut'), nullable=False)
     programa_id = db.Column(db.Integer, db.ForeignKey('programas.id'), nullable=False)
     tipo_contrato_id = db.Column(db.Integer, db.ForeignKey('cfg_tipos_contrato.id'), nullable=False)
     
-    # NUEVO: Horas semanales
+    # Gestión Administrativa
     horas_semanales = db.Column(db.Integer, default=44)
-    
-    # ESTADO: Control de ciclo de vida
     estado = db.Column(db.String(20), default='BORRADOR') 
-    
-    # ARCHIVO FIRMADO: Nombre del PDF subido (ej: contrato_100_firmado.pdf)
     archivo_firmado = db.Column(db.String(255), nullable=True)
 
-    # AUTORIDADES
+    # Identificación de Firmantes vinculados al catálogo de roles
     autoridad_id = db.Column(db.Integer, db.ForeignKey('cfg_autoridades_firmantes.id'), nullable=False)
     secretario_id = db.Column(db.Integer, db.ForeignKey('cfg_autoridades_firmantes.id'), nullable=False)
 
-    # 2. DATOS DEL CONTRATO / DECRETO
+    # Datos del Decreto / Fechas
     numero_decreto_autoriza = db.Column(db.String(50), nullable=True)
     fecha_decreto = db.Column(db.Date, nullable=True)
     fecha_firma = db.Column(db.Date, nullable=True)
-    
     fecha_inicio = db.Column(db.Date, nullable=False)
     fecha_fin = db.Column(db.Date, nullable=False)
     
-    # DATOS ECONÓMICOS GLOBALES
+    # Resumen Económico
     monto_total = db.Column(db.Integer, nullable=False)
-    numero_cuotas = db.Column(db.Integer, default=1) # Cantidad de pagos pactados
-    valor_mensual = db.Column(db.Integer, nullable=False) # Referencial
+    numero_cuotas = db.Column(db.Integer, default=1) 
+    valor_mensual = db.Column(db.Integer, nullable=False) 
 
-    # 3. CAMPOS JSON
+    # Estructuras JSON para flexibilidad de informes
     funciones_json = db.Column(db.JSON, nullable=True) 
     horario_json = db.Column(db.JSON, nullable=True)
-    distribucion_cuentas_json = db.Column(db.JSON, nullable=False) # Resumen global para consultas rápidas
+    distribucion_cuentas_json = db.Column(db.JSON, nullable=False) 
 
-    # 4. RELACIONES ORM
-    persona = db.relationship('Persona', backref='contratos')
+    # Relaciones ORM
+    persona = db.relationship('Persona', backref='contratos', foreign_keys=[persona_id])
     programa = db.relationship('Programa')
     tipo = db.relationship('TipoContratoHonorario')
 
     autoridad = db.relationship('AutoridadFirmante', foreign_keys=[autoridad_id])
     secretario = db.relationship('AutoridadFirmante', foreign_keys=[secretario_id])
 
-    # Relación con Nivel 2 (Cuotas)
+    # Vínculo con niveles inferiores (Cuotas)
     cuotas = db.relationship('ContratoCuota', backref='contrato', cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f'<Contrato {self.id} - Dec: {self.numero_decreto_autoriza} ({self.estado})>'
+        return f'<Contrato {self.id} - Funcionario RUT: {self.persona_id} ({self.estado})>'
