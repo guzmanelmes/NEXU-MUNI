@@ -77,7 +77,9 @@
                                 </td>
 
                                 <td class="text-center">
-                                    {% if orden.estado == 'BORRADOR' %}
+                                    {% if orden.decreto_auth and orden.decreto_auth.archivo_digital %}
+                                        <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Tramitado</span>
+                                    {% elif orden.estado == 'BORRADOR' %}
                                         <span class="badge bg-secondary">Borrador</span>
                                     {% elif orden.estado == 'AUTORIZADA' %}
                                         <span class="badge bg-success">Autorizada</span>
@@ -89,6 +91,18 @@
                                 </td>
                                 <td class="text-end pe-3">
                                     <div class="btn-group shadow-sm">
+                                        <button class="btn btn-sm btn-dark" title="Subir Decreto Escaneado" 
+                                                onclick="abrirModalSubida({{ orden.id }}, '{{ orden.decreto_auth.numero_decreto or '' }}')">
+                                            <i class="bi bi-file-earmark-arrow-up"></i>
+                                        </button>
+
+                                        {% if orden.decreto_auth and orden.decreto_auth.archivo_digital %}
+                                        <a href="{{ url_for('static', filename='uploads/decretos/' + orden.decreto_auth.archivo_digital) }}" 
+                                           target="_blank" class="btn btn-sm btn-outline-success" title="Ver PDF Firmado">
+                                            <i class="bi bi-file-pdf"></i>
+                                        </a>
+                                        {% endif %}
+
                                         <a href="{{ url_for('he_bp.descargar_word', id=orden.id) }}" class="btn btn-sm btn-outline-info" title="Descargar Decreto Word">
                                             <i class="bi bi-file-earmark-word"></i>
                                         </a>
@@ -122,6 +136,34 @@
         </div>
     </div>
 
+</div>
+
+<div class="modal fade" id="modalSubirPDF" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form id="formSubirPDF" method="POST" enctype="multipart/form-data">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-check me-2"></i>Finalizar Decreto</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Número de Decreto Oficial</label>
+                        <input type="text" name="numero_decreto" id="input_num_decreto" class="form-control" placeholder="Ej: 1540" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Documento Escaneado (PDF)</label>
+                        <input type="file" name="archivo_pdf" id="archivo_pdf" class="form-control" accept=".pdf">
+                        <div class="form-text small text-info"><i class="bi bi-info-circle me-1"></i>Solo archivos PDF. Dejar vacío si solo desea actualizar el número.</div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-bold">Actualizar y Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="modalDetalle" tabindex="-1" aria-labelledby="modalDetalleLabel" aria-hidden="true">
@@ -180,7 +222,7 @@
                             </tr>
                         </thead>
                         <tbody id="det_tabla_body" class="small">
-                            </tbody>
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -192,29 +234,34 @@
 </div>
 
 <script>
+function abrirModalSubida(id, numeroActual) {
+    const form = document.getElementById('formSubirPDF');
+    form.action = `/horas_extras/solicitud/subir_decreto/${id}`;
+    document.getElementById('input_num_decreto').value = (numeroActual === 'No asignado') ? '' : numeroActual;
+    
+    const myModal = new bootstrap.Modal(document.getElementById('modalSubirPDF'));
+    myModal.show();
+}
+
 function verDetalle(id) {
-    // Usamos Fetch para obtener el JSON del nuevo endpoint
     fetch(`/horas_extras/solicitud/detalle/${id}`)
         .then(response => {
             if (!response.ok) throw new Error('Error al obtener datos');
             return response.json();
         })
         .then(data => {
-            // Llenar cabecera
             document.getElementById('det_id').innerText = data.id;
             document.getElementById('det_funcionario').innerText = data.funcionario;
             document.getElementById('det_rut').innerText = "RUT: " + data.rut;
             document.getElementById('det_decreto').innerText = data.decreto;
             document.getElementById('det_fecha_decreto').innerText = data.fecha_decreto;
             
-            // Estado y color
             const badge = document.getElementById('det_estado');
             badge.innerText = data.estado;
             badge.className = "badge p-2 px-3 " + 
                 (data.estado === 'BORRADOR' ? 'bg-secondary' : 
                  data.estado === 'AUTORIZADA' ? 'bg-success' : 'bg-info text-dark');
 
-            // Manejo de Emergencia
             const areaE = document.getElementById('area_emergencia');
             if(data.es_emergencia) {
                 areaE.classList.remove('d-none');
@@ -223,7 +270,6 @@ function verDetalle(id) {
                 areaE.classList.add('d-none');
             }
 
-            // Llenar Tabla de Jornadas
             const tbody = document.getElementById('det_tabla_body');
             tbody.innerHTML = "";
             
@@ -244,7 +290,6 @@ function verDetalle(id) {
                 });
             }
 
-            // Mostrar el Modal
             const myModal = new bootstrap.Modal(document.getElementById('modalDetalle'));
             myModal.show();
         })

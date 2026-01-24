@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="bi bi-cash-coin text-success"></i> Gestión de Pagos Mensuales
+            </h1>
+            <p class="text-muted small mb-0">Verifique asistencia, calcule remuneraciones y gestione horas compensadas.</p>
+        </div>
+        
+        <form class="d-flex align-items-center bg-white p-2 rounded shadow-sm border" method="GET">
+            <label class="me-2 small fw-bold text-muted">Periodo:</label>
+            <select name="mes" class="form-select form-select-sm me-2" style="width: 120px;">
+                {% set meses_nom = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'] %}
+                {% for m in range(1, 13) %}
+                <option value="{{ m }}" {% if m == mes_actual %}selected{% endif %}>{{ meses_nom[m-1] }}</option>
+                {% endfor %}
+            </select>
+            <input type="number" name="anio" class="form-control form-control-sm me-2" value="{{ anio_actual }}" style="width: 80px;">
+            <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i></button>
+        </form>
+    </div>
+
+    {% if pendientes %}
+    <div class="card shadow mb-4 border-start border-warning border-4">
+        <div class="card-header py-3 bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-dark">
+                <i class="bi bi-exclamation-circle-fill text-warning me-2"></i> 
+                Pendientes de Proceso (Decretos Tramitados)
+            </h6>
+            <span class="badge bg-warning text-dark">{{ pendientes|length }} Pendientes</span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Funcionario</th>
+                            <th>RUT</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in pendientes %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark">{{ p.nombres }} {{ p.apellido_paterno }}</div>
+                            </td>
+                            <td class="text-muted">{{ p.rut_funcionario }}</td>
+                            <td class="text-end">
+                                <button class="btn btn-info btn-sm text-white me-2 shadow-sm" 
+                                        onclick="abrirAsistencia('{{ p.rut_funcionario }}', '{{ p.nombres }} {{ p.apellido_paterno }}')">
+                                    <i class="bi bi-calendar-check me-1"></i> Ver Asistencia
+                                </button>
+
+                                <form action="{{ url_for('he_bp.procesar_calculo_funcionario', rut=p.rut_funcionario) }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="mes" value="{{ mes_actual }}">
+                                    <input type="hidden" name="anio" value="{{ anio_actual }}">
+                                    <button type="submit" class="btn btn-primary btn-sm shadow-sm">
+                                        <i class="bi bi-calculator me-1"></i> Calcular
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card shadow mb-4 border-top border-primary border-3">
+        <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary"><i class="bi bi-table"></i> Consolidado de Horas</h6>
+            {% if consolidados %}
+            <span class="badge bg-success">Listo para pago</span>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-light text-center small text-uppercase">
+                        <tr>
+                            <th rowspan="2" class="align-middle">Funcionario</th>
+                            <th rowspan="2" class="align-middle">Grado</th>
+                            <th colspan="2" class="bg-primary bg-opacity-10 text-primary border-bottom-0">A Pagar ($)</th>
+                            <th colspan="2" class="bg-warning bg-opacity-10 text-dark border-bottom-0 border-start border-warning">Compensar (Hrs)</th>
+                            <th rowspan="2" class="align-middle bg-success text-white">Total $</th>
+                            <th rowspan="2" class="align-middle">Acciones</th>
+                        </tr>
+                        <tr>
+                            <th class="bg-primary bg-opacity-10 text-primary small">25%</th>
+                            <th class="bg-primary bg-opacity-10 text-primary small">50%</th>
+                            <th class="bg-warning bg-opacity-10 small border-start border-warning">25%</th>
+                            <th class="bg-warning bg-opacity-10 small">50%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in consolidados %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark">{{ c.funcionario.nombres }} {{ c.funcionario.apellido_paterno }}</div>
+                                <small class="text-muted font-monospace">{{ c.rut_funcionario }}</small>
+                            </td>
+                            <td class="text-center fw-bold">{{ c.grado_al_calculo }}</td>
+                            
+                            <td class="text-center fw-bold text-primary">{{ "{:g}".format(c.horas_a_pagar_25) }}</td>
+                            <td class="text-center fw-bold text-primary">{{ "{:g}".format(c.horas_a_pagar_50) }}</td>
+                            
+                            <td class="text-center text-muted bg-warning bg-opacity-10 border-start border-warning">
+                                {{ "{:g}".format(c.horas_compensar_25 or 0) }}
+                            </td>
+                            <td class="text-center text-muted bg-warning bg-opacity-10">
+                                {{ "{:g}".format(c.horas_compensar_50 or 0) }}
+                            </td>
+                            
+                            <td class="text-end fw-bold text-success fs-6 bg-success bg-opacity-10">
+                                ${{ "{:,.0f}".format(c.monto_total_pagar).replace(',', '.') }}
+                            </td>
+                            
+                            <td class="text-center">
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-info" title="Revisar Asistencia"
+                                            onclick="abrirAsistencia('{{ c.rut_funcionario }}', '{{ c.funcionario.nombres }}')">
+                                        <i class="bi bi-calendar-check"></i>
+                                    </button>
+
+                                    <form action="{{ url_for('he_bp.procesar_calculo_funcionario', rut=c.rut_funcionario) }}" method="POST" style="display:inline;">
+                                        <input type="hidden" name="mes" value="{{ mes_actual }}">
+                                        <input type="hidden" name="anio" value="{{ anio_actual }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" title="Recalcular (Resetear)">
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        </button>
+                                    </form>
+                                    
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-dark" 
+                                            title="Distribuir Horas"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#modalEditarPago"
+                                            data-rut="{{ c.rut_funcionario }}"
+                                            data-nombre="{{ c.funcionario.nombres }} {{ c.funcionario.apellido_paterno }}"
+                                            data-hp25="{{ c.horas_a_pagar_25 or 0 }}"
+                                            data-hp50="{{ c.horas_a_pagar_50 or 0 }}"
+                                            data-hc25="{{ c.horas_compensar_25 or 0 }}"
+                                            data-hc50="{{ c.horas_compensar_50 or 0 }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="9" class="text-center py-5 text-muted">No hay datos.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if consolidados %}
+            <div class="d-flex justify-content-end mt-4 pt-3 border-top">
+                <button type="button" class="btn btn-success fw-bold shadow" data-bs-toggle="modal" data-bs-target="#modalGenerarDecreto">
+                    <i class="bi bi-file-earmark-word me-2"></i> Generar Decreto de Pago Masivo
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card shadow mb-4 border-top border-secondary border-3">
+        <div class="card-header py-3 bg-white">
+            <h6 class="m-0 fw-bold text-secondary"><i class="bi bi-archive"></i> Historial de Documentos (Este Mes)</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nº Decreto</th>
+                            <th>Fecha Doc.</th>
+                            <th>Descripción</th>
+                            <th>Archivo</th>
+                            <th>Generado El</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dec in historial_decretos %}
+                        <tr>
+                            <td class="fw-bold text-center">{{ dec.numero_decreto }}</td>
+                            <td class="text-center">{{ dec.fecha_decreto.strftime('%d-%m-%Y') }}</td>
+                            <td>{{ dec.descripcion }}</td>
+                            <td class="text-center">
+                                {% if dec.archivo_digital %}
+                                    <a href="{{ url_for('static', filename='generated/' + dec.archivo_digital) }}" 
+                                       class="btn btn-sm btn-success shadow-sm" download>
+                                        <i class="bi bi-download me-1"></i> Descargar
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted small">No disponible</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small text-center">{{ dec.created_at.strftime('%d-%m-%Y %H:%M') }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-3 text-muted">
+                                No se han generado decretos de pago para este mes aún.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalGenerarDecreto" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('he_bp.generar_decreto_pago') }}" method="POST">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-file-text me-2"></i>Emitir Decreto de Pago</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">Configure los datos del decreto antes de generar el archivo.</p>
+                    
+                    <input type="hidden" name="anio" value="{{ anio_actual }}">
+                    <input type="hidden" name="mes" value="{{ mes_actual }}">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Número de Decreto</label>
+                        <input type="text" class="form-control" name="numero_decreto" placeholder="Ej: 1234" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Fecha del Decreto</label>
+                        <input type="date" class="form-control" name="fecha_decreto" value="{{ anio_actual }}-{{ '%02d'|format(mes_actual) }}-01" required>
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Firmante (Alcalde)</label>
+                        <select class="form-select" name="id_firmante_alcalde" required>
+                            <option value="">Seleccione...</option>
+                            {% for f in firmantes %}
+                                {% if 'ALCALDE' in f.cargo.upper() %}
+                                <option value="{{ f.id }}">{{ f.firma_linea_1 }} - {{ f.cargo }}</option>
+                                {% endif %}
+                            {% endfor %}
+                            <optgroup label="Otras Autoridades">
+                                {% for f in firmantes %}
+                                    {% if 'ALCALDE' not in f.cargo.upper() %}
+                                    <option value="{{ f.id }}">{{ f.firma_linea_1 }} - {{ f.cargo }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Firmante (Secretario)</label>
+                        <select class="form-select" name="id_firmante_secretario" required>
+                            <option value="">Seleccione...</option>
+                            {% for f in firmantes %}
+                                {% if 'SECRETARIO' in f.cargo.upper() %}
+                                <option value="{{ f.id }}" selected>{{ f.firma_linea_1 }} - {{ f.cargo }}</option>
+                                {% endif %}
+                            {% endfor %}
+                            <optgroup label="Otras Autoridades">
+                                {% for f in firmantes %}
+                                    {% if 'SECRETARIO' not in f.cargo.upper() %}
+                                    <option value="{{ f.id }}">{{ f.firma_linea_1 }} - {{ f.cargo }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-bold">
+                        <i class="bi bi-download me-1"></i> Descargar Word
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalAsistencia" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-clock-history me-2"></i>Verificación de Asistencia</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="modalFuncionarioNombreAsistencia" class="fw-bold text-primary mb-3"></h6>
+                <div class="alert alert-light border border-info small text-muted">
+                    <i class="bi bi-info-circle-fill text-info me-1"></i> 
+                    <strong>Reglas:</strong> Solo horas enteras (1, 2, 3). No puede superar lo planificado. Redondeo siempre hacia abajo.
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm align-middle text-center small">
+                        <thead class="table-light"><tr><th>Fecha</th><th>Horario</th><th>Tipo</th><th>Hrs Plan</th><th style="width:120px;">Hrs Reales</th><th>Actividad</th></tr></thead>
+                        <tbody id="tablaAsistenciaBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary fw-bold" onclick="guardarCambiosAsistencia()">
+                    <i class="bi bi-save me-1"></i> Guardar y Recalcular
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditarPago" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('he_bp.actualizar_consolidado') }}" method="POST">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="bi bi-arrow-left-right me-2"></i>Distribuir Horas</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3 p-2 bg-light rounded border text-center">
+                        <strong id="modalNombreFuncionario" class="d-block text-primary"></strong>
+                        <small id="modalRutFuncionario" class="text-muted"></small>
+                    </div>
+
+                    <input type="hidden" name="rut_funcionario" id="inputRut">
+                    <input type="hidden" name="anio" value="{{ anio_actual }}">
+                    <input type="hidden" name="mes" value="{{ mes_actual }}">
+
+                    <div class="row g-0">
+                        <div class="col-6 pe-3 border-end">
+                            <h6 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-cash me-1"></i>A Pagar ($)</h6>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">Horas al 25%</label>
+                                <input type="number" step="1" min="0" class="form-control fw-bold" name="horas_pagar_25" id="inputHP25">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">Horas al 50%</label>
+                                <input type="number" step="1" min="0" class="form-control fw-bold" name="horas_pagar_50" id="inputHP50">
+                            </div>
+                        </div>
+
+                        <div class="col-6 ps-3 bg-warning bg-opacity-10">
+                            <h6 class="text-dark border-bottom border-warning pb-2 mb-3 px-2"><i class="bi bi-hourglass-split me-1"></i>Compensar</h6>
+                            <div class="mb-3 px-2">
+                                <label class="form-label small fw-bold text-muted">Horas al 25%</label>
+                                <input type="number" step="1" min="0" class="form-control border-warning fw-bold" name="horas_compensar_25" id="inputHC25">
+                            </div>
+                            <div class="mb-3 px-2">
+                                <label class="form-label small fw-bold text-muted">Horas al 50%</label>
+                                <input type="number" step="1" min="0" class="form-control border-warning fw-bold" name="horas_compensar_50" id="inputHC50">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info py-1 px-2 small mb-0 mt-3 text-center">
+                        <i class="bi bi-info-circle"></i> Los totales se ajustan automáticamente.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- LÓGICA MODAL EDICIÓN (LÁPIZ) ---
+    let totalHoras25 = 0;
+    let totalHoras50 = 0;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var modalEditar = document.getElementById('modalEditarPago');
+        const inpHP25 = document.getElementById('inputHP25');
+        const inpHC25 = document.getElementById('inputHC25');
+        const inpHP50 = document.getElementById('inputHP50');
+        const inpHC50 = document.getElementById('inputHC50');
+
+        modalEditar.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var hp25 = Math.floor(parseFloat(button.getAttribute('data-hp25')) || 0);
+            var hp50 = Math.floor(parseFloat(button.getAttribute('data-hp50')) || 0);
+            var hc25 = Math.floor(parseFloat(button.getAttribute('data-hc25')) || 0);
+            var hc50 = Math.floor(parseFloat(button.getAttribute('data-hc50')) || 0);
+
+            totalHoras25 = hp25 + hc25;
+            totalHoras50 = hp50 + hc50;
+
+            document.getElementById('modalNombreFuncionario').textContent = button.getAttribute('data-nombre');
+            document.getElementById('modalRutFuncionario').textContent = button.getAttribute('data-rut');
+            document.getElementById('inputRut').value = button.getAttribute('data-rut');
+            
+            inpHP25.value = hp25; inpHC25.value = hc25;
+            inpHP50.value = hp50; inpHC50.value = hc50;
+        });
+
+        const balancear = (main, sec, total) => {
+            let val = Math.floor(parseFloat(main.value) || 0);
+            if (val > total) { val = total; main.value = val; } 
+            if (val < 0) { val = 0; main.value = 0; }
+            sec.value = total - val;
+        };
+
+        inpHP25.addEventListener('input', () => balancear(inpHP25, inpHC25, totalHoras25));
+        inpHC25.addEventListener('input', () => balancear(inpHC25, inpHP25, totalHoras25));
+        inpHP50.addEventListener('input', () => balancear(inpHP50, inpHC50, totalHoras50));
+        inpHC50.addEventListener('input', () => balancear(inpHC50, inpHP50, totalHoras50));
+    });
+
+    // --- LÓGICA MODAL ASISTENCIA (TAREO ESTRICTO) ---
+    let currentRutAsis = '', currentMes = {{ mes_actual }}, currentAnio = {{ anio_actual }};
+
+    function abrirAsistencia(rut, nombre) {
+        currentRutAsis = rut;
+        document.getElementById('modalFuncionarioNombreAsistencia').innerText = nombre;
+        const tbody = document.getElementById('tablaAsistenciaBody');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3">Cargando...</td></tr>';
+        new bootstrap.Modal(document.getElementById('modalAsistencia')).show();
+
+        fetch(`/horas_extras/api/asistencia/${rut}/${currentAnio}/${currentMes}`).then(r=>r.json()).then(data=>{
+            tbody.innerHTML = '';
+            if(data.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay datos.</td></tr>'; return; }
+            data.forEach(d => {
+                let badge = d.tipo === 'DIURNO' ? 'bg-info' : 'bg-dark';
+                let hPlan = Math.floor(d.horas_plan), hReal = Math.floor(d.horas_real);
+                tbody.innerHTML += `<tr>
+                    <td class="small">${d.fecha}</td><td class="small">${d.inicio}-${d.termino}</td>
+                    <td><span class="badge ${badge}">${d.tipo}</span></td><td class="fw-bold text-muted">${hPlan}</td>
+                    <td class="p-1"><input type="number" step="1" min="0" max="${hPlan}" class="form-control form-control-sm text-center fw-bold border-warning input-real" data-id="${d.id}" data-max="${hPlan}" value="${hReal}" oninput="validarTope(this)"></td>
+                    <td class="small text-truncate" style="max-width:120px;">${d.actividad}</td></tr>`;
+            });
+        });
+    }
+
+    function validarTope(inp) {
+        let max = parseInt(inp.getAttribute('data-max')), val = parseFloat(inp.value);
+        if (val % 1 !== 0) { val = Math.floor(val); inp.value = val; }
+        if (val > max) { inp.value = max; inp.classList.add('is-invalid'); setTimeout(()=>inp.classList.remove('is-invalid'), 1000); }
+    }
+
+    function guardarCambiosAsistencia() {
+        let cambios = [];
+        document.querySelectorAll('.input-real').forEach(i => cambios.push({id: i.getAttribute('data-id'), valor: parseInt(i.value)||0}));
+        fetch('/horas_extras/gestion-mensual/guardar-asistencia', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({rut:currentRutAsis, mes:currentMes, anio:currentAnio, cambios:cambios})
+        }).then(r=>r.json()).then(d=>{
+            if(d.status==='ok'){ bootstrap.Modal.getInstance(document.getElementById('modalAsistencia')).hide(); location.reload(); }
+            else alert(d.msg);
+        });
+    }
+</script>
+{% endblock %}

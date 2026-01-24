@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800 fw-bold">
+            <i class="bi bi-gear-fill text-primary"></i> Configuración de Jornadas y Calendario
+        </h1>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2"></i>Nuevo Feriado</h6>
+                </div>
+                <div class="card-body p-4">
+                    <form action="{{ url_for('turnos_bp.agregar_feriado') }}" method="POST">
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted">Fecha</label>
+                            <input type="date" name="fecha" class="form-control border-light-subtle py-2" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted">Descripción</label>
+                            <input type="text" name="descripcion" class="form-control border-light-subtle py-2" placeholder="Ej: Año Nuevo" required>
+                        </div>
+                        <input type="hidden" name="tipo_dia" value="FERIADO">
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success fw-bold py-2 shadow-sm">
+                                <i class="bi bi-save me-2"></i>Guardar Feriado
+                            </button>
+                        </div>
+                    </form>
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('main_bp.dashboard') }}" class="text-decoration-none small text-muted">Volver al Dashboard</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0 rounded-3 overflow-hidden h-100">
+                <div class="card-header bg-dark text-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-calendar-check me-2"></i>Feriados Registrados</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 450px;">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr class="small text-muted text-uppercase">
+                                    <th class="ps-4" style="width: 25%;">Fecha</th>
+                                    <th>Nombre del Feriado</th>
+                                    <th class="text-center" style="width: 15%;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if feriados %}
+                                    {% for f in feriados %}
+                                    <tr>
+                                        <td class="ps-4 fw-bold text-dark">{{ f.fecha.strftime('%d-%m-%Y') }}</td>
+                                        <td class="text-muted">{{ f.descripcion }}</td>
+                                        <td class="text-center">
+                                            <form action="{{ url_for('turnos_bp.eliminar_feriado', id=f.id) }}" method="POST" onsubmit="return confirm('¿Eliminar feriado?')">
+                                                <button type="submit" class="btn btn-danger btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px;">
+                                                    <i class="bi bi-trash-fill"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr><td colspan="3" class="text-center py-5 text-muted">No hay feriados registrados.</td></tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card shadow border-0">
+                <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center border-bottom">
+                    <h6 class="m-0 fw-bold text-primary"><i class="bi bi-clock-history me-2"></i>Reglas de Jornada Base</h6>
+                    <button class="btn btn-sm btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#modalNuevaJornada">
+                        <i class="bi bi-plus-lg"></i> Nueva Regla
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light small text-muted text-uppercase">
+                                <tr>
+                                    <th class="ps-4">Nombre de la Regla</th>
+                                    <th>Ámbito Aplicación</th>
+                                    <th>Valor (RUT/ID)</th>
+                                    <th class="text-end pe-4">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for j in jornadas %}
+                                <tr>
+                                    <td class="ps-4 fw-bold text-dark">{{ j.nombre }}</td>
+                                    <td>
+                                        <span class="badge {% if j.tipo_ambito == 'GENERAL' %}bg-info{% elif j.tipo_ambito == 'ESTAMENTO' %}bg-primary{% else %}bg-dark{% endif %}">
+                                            {{ j.tipo_ambito }}
+                                        </span>
+                                    </td>
+                                    <td class="text-muted">{{ j.valor_ambito or 'GLOBAL' }}</td>
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('turnos_bp.configurar_detalle', id=j.id) }}" class="btn btn-sm btn-outline-primary" title="Configurar Horarios Semanales">
+                                                <i class="bi bi-calendar-range"></i>
+                                            </a>
+                                            <form action="{{ url_for('turnos_bp.eliminar_jornada', id=j.id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta jornada?')">
+                                                <button class="btn btn-sm btn-outline-danger ms-1"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalNuevaJornada" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <form action="{{ url_for('turnos_bp.crear_jornada') }}" method="POST">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">Nueva Regla de Jornada</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Nombre descriptivo</label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej: Turno Nocturno Seguridad" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Nivel de Aplicación</label>
+                        <select name="tipo_ambito" class="form-select" required>
+                            <option value="GENERAL">General (Municipalidad completa)</option>
+                            <option value="ESTAMENTO">Por Unidad / Estamento</option>
+                            <option value="FUNCIONARIO">Funcionario Específico (Personalizado)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Valor (RUT o ID Unidad)</label>
+                        <input type="text" name="valor_ambito" class="form-control rut-format" placeholder="RUT: 12.345.678-9 o ID" maxlength="12">
+                        <div class="form-text small">Si aplica a un funcionario, ingrese RUT. Si es unidad, el código de unidad.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary fw-bold">Guardar Regla</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('input', function (e) {
+    if (e.target.classList.contains('rut-format')) {
+        let value = e.target.value.replace(/\./g, '').replace('-', '');
+        if (value.length > 1) {
+            let cuerpo = value.slice(0, -1);
+            let dv = value.slice(-1).toUpperCase();
+            cuerpo = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            e.target.value = cuerpo + '-' + dv;
+        }
+    }
+});
+</script>
+{% endblock %}
